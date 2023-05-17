@@ -1,0 +1,418 @@
+---
+title: "IMC data analysis workflow"
+author: "Tess and Tural"
+date: "University of Bern, DBMR, Visceral and Transplantation Surgery lab"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+# Quality control cell mask
+
+```{r setup, include=FALSE}
+#Setup knitr, incuding path
+knitr::opts_chunk$set(echo = TRUE)
+
+#Important - this path is relative to your dataset, set working directory
+knitr::opts_knit$set(root.dir = "C:/Users/IMC Platform laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haibin")
+
+#Set cache
+knitr::opts_chunk$set(autodep = TRUE, cache = TRUE, cache.lazy = FALSE)
+
+#To make figures
+knitr::opts_chunk$set(dev = "png")
+```
+
+```{css, echo=FALSE}
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+### Load packages 
+
+```{r load-libs, message=FALSE}
+
+library(imcRtools)
+library(cytomapper)
+library(openxlsx)
+library(stringr)
+library(dittoSeq)
+library(RColorBrewer)
+library(cytomapper)
+library(viridis)
+library(tidyverse)
+library(ggrepel)
+library(EBImage)
+library(scuttle)
+library(mclust)
+library(scater)
+library(patchwork)
+library(batchelor)
+library(harmony)
+library(Seurat)
+library(SeuratObject)
+library(cowplot)
+library(gtools)
+```
+
+### Load data
+
+```{r load data}
+spe <- readRDS(file.path("output", "spe0.rds"))
+spe$ROI <- factor(spe$ROI, levels = mixedsort(unique(spe$ROI)))
+spe$patient_id <- factor(spe$patient_id, levels = 1:9)
+use_channel <- rowData(spe)$name[rowData(spe)$use_channel]
+```
+
+### Read in images and create metadata for images object
+
+```{r reading in images, eval=FALSE, class.output="scroll-100", include=FALSE}
+#Load all of the .tiff images from the img folder
+images <- loadImages("./data/img")
+
+#Load all of the masks from the masks folder
+masks <- loadImages("./data/masks", as.is = TRUE)
+
+#Assign the channel names of the "images" object based on the SPE structure
+channelNames(images) <- rownames(spe)
+
+#Visual control
+images
+all.equal(names(images), names(masks))
+
+#Create metadata for the "images" object
+
+meta <- read.xlsx("./data/sample_metadata_shortened.xlsx")
+
+patient_id <- meta$patient_id[match(names(images), meta$sample_id)]
+ROI <- meta$ROI[match(names(images), meta$sample_id)]
+condition <- meta$condition[match(names(images), meta$sample_id)]
+annotation <- meta$annotation[match(names(images), meta$sample_id)]
+
+# Help here
+
+mcols(images) <- mcols(masks) <- DataFrame(sample_id = names(images),
+                                            patient_id = patient_id,
+                                            ROI = ROI,
+                                            annotation = annotation,
+                                            condition = condition)
+
+mcols(images)
+
+```
+
+### Save rds
+
+```{r read in data, eval=FALSE, include=FALSE}
+saveRDS(images, "data/images.rds")
+saveRDS(masks, "data/masks.rds")
+```
+
+### Open rds
+
+```{r open rds}
+images <- readRDS("data/images.rds")
+masks <- readRDS("data/masks.rds")
+```
+
+### Segmentation quality control
+
+```{r segmentation QC, fig.width= 12, fig.height=12}
+img_ids <- sample(seq_len(length(images)), 6)
+
+# Normalize and clip images
+cur_images <- images[img_ids]
+cur_images <- normalize(cur_images, separateImages = TRUE)
+cur_images <- normalize(cur_images, inputRange = c(0,0.2))
+
+
+plotPixels(cur_images,
+           mask = masks[img_ids],
+           img_id = "sample_id",
+           missing_colour = "white",
+           colour_by = c("CD206", "E-cadherin", "DNA1", "DNA2", "HistoneH3"),
+           colour = list("CD206" = c("black", "green"),
+                         "E-cadherin" = c("black", "red"),
+                         "DNA1" = c("black", "blue"), "DNA2"= c("black", "blue"),
+                         "HistoneH3" = c("black", "blue")),
+           bcg = list("DNA1" = c(0, 1, 1),
+                      "DNA2" = c(0, 1, 1),
+                      "HistoneH3" = c(0, 1, 1),
+                      "E-cadherin" = c(0, 3, 1),
+                      "CD206" = c(0, 5, 1)),
+           image_title = NULL,
+           legend = list(colour_by.title.cex = 0.7,
+                         colour_by.labels.cex = 0.7))
+
+```
+
+### Visualize single-cell expression in a heatmap
+
+```{r single cell expression heatmap}
+set.seed(20221201)
+cur_cells <- sample(seq_len(ncol(spe)), 2000)
+
+dittoHeatmap(spe[,cur_cells], genes = use_channel,
+             assay = "exprs", cluster_cols = TRUE, scale = "none",
+             heatmap.colors = viridis(100), annot.by = "condition",
+             annotation_colors = list(indication = metadata(spe)$color_vectors$indication))
+```
+
+### Image level QC: signal to noise ratio (SNR) for each marker
+
+```{r heatmap qc, class.output="scroll-100"}
+img_ids <- sample(seq_len(length(images)), 25)
+
+cur_snr <- lapply(images[img_ids], function(img){
+    mat <- apply(img, 3, function(ch){
+        # Otsu threshold
+        thres <- otsu(ch, range = c(min(ch), max(ch)))
+        # Signal-to-noise ratio
+        snr <- mean(ch[ch > thres]) / mean(ch[ch <= thres])
+        # Signal intensity
+        ps <- mean(ch[ch > thres])
+        
+        return(c(snr = snr, ps = ps))
+    })
+    t(mat) %>% as.data.frame() %>% 
+        mutate(marker = colnames(mat)) %>% 
+        pivot_longer(cols = c(snr, ps))
+})
+
+cur_snr <- do.call(rbind, cur_snr)
+
+#Subsetting the SNR plot values to only contain channels of interest
+
+cur_snr <- cur_snr[cur_snr$marker %in% 
+          (rownames(spe)[rowData(spe)$use_channel]), ]
+
+cur_snr %>% 
+    group_by(marker, name) %>%
+    summarize(mean = mean(value),
+              ci = qnorm(0.975)*sd(value)/sqrt(n())) %>%
+    pivot_wider(names_from = name, values_from = c(mean, ci)) %>%
+    ggplot() +
+    geom_errorbar(aes(y = log2(mean_snr), xmin = log2(mean_ps - ci_ps), 
+                      xmax = log2(mean_ps + ci_ps))) +
+    geom_errorbar(aes(x = log2(mean_ps), ymin = log2(mean_snr - ci_snr), 
+                      ymax = log2(mean_snr + ci_snr))) +
+    geom_point(aes(log2(mean_ps), log2(mean_snr))) +
+    geom_label_repel(aes(log2(mean_ps), log2(mean_snr), label = marker)) +
+    theme_minimal(base_size = 15) + ylab("Signal-to-noise ratio") +
+    xlab("Signal intensity")
+```
+
+### Image area covered by cells 
+
+```{r cell coverage}
+colData(spe) %>%
+    as.data.frame() %>%
+    group_by(ROI) %>%
+    summarize(cell_area = sum(area),
+           no_pixels = mean(width_px) * mean(height_px)) %>%
+    mutate(covered_area = cell_area / no_pixels) %>%
+    ggplot() +
+        geom_point(aes(ROI, covered_area)) + 
+        theme_minimal(base_size = 15) +
+        ylim(c(0, 1)) + 
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +
+        ylab("% covered area") + xlab("")
+```
+
+
+### Display single images with low image area covered by cells to analyze
+
+```{r display images, class.output="scroll-100"}
+# Normalize and clip images
+cur_images <- images[c("221031_day1_Haibin_6_11", "221031_day1_Haibin_7_12", "221103_day4_Haibin_54_18")]
+cur_images <- normalize(cur_images, separateImages = TRUE)
+cur_images <- normalize(cur_images, inputRange = c(0, 0.2))
+
+plotPixels(cur_images,
+           mask = masks[c("221031_day1_Haibin_6_11", "221031_day1_Haibin_7_12", "221103_day4_Haibin_54_18")],
+           img_id = "sample_id",
+           missing_colour = "white",
+           colour_by = c("CD206", "a-SMA", "CD3e", "E-cadherin", "DNA1"),
+           colour = list("CD206" = c("black", "yellow"),
+                         "a-SMA" = c("black", "red"),
+                         "CD3e" = c("black", "green"),
+                         "E-cadherin" = c("black", "cyan"),
+                         "DNA1" = c("black", "blue")),
+           legend = list(colour_by.title.cex = 0.7,
+                         colour_by.labels.cex = 0.7))
+```
+
+### Mean marker expression per image to identify images with outlying cell type compositions
+
+```{r mean marker expression across samples, fig.width= 8, fig.height=5}
+
+image_mean <- aggregateAcrossCells(spe, 
+                                   ids = spe$ROI, 
+                                   statistics="mean",
+                                   use.assay.type = "counts")
+
+assay(image_mean, "exprs") <- asinh(counts(image_mean))
+
+dittoHeatmap(image_mean, genes = use_channel,
+             assay = "exprs", cluster_cols = TRUE, scale = "none",
+             heatmap.colors = viridis(100), 
+             annot.by = c("condition", "patient_id", "ROI"),
+             show_colnames = TRUE)
+```
+
+### Cell level QC: SNR for each marker
+
+```{r SNR cell level, class.output="scroll-100"}
+
+set.seed(20221201)
+mat <- apply(assay(spe, "exprs"), 1, function(x){
+    cur_model <- Mclust(x, G = 2)
+    mean1 <- mean(x[cur_model$classification == 1])
+    mean2 <- mean(x[cur_model$classification == 2])
+    
+    signal <- ifelse(mean1 > mean2, mean1, mean2)
+    noise <- ifelse(mean1 > mean2, mean2, mean1)
+    
+    return(c(snr = signal/noise, ps = signal))
+})
+    
+cur_snr <- t(mat) %>% as.data.frame() %>% 
+        mutate(marker = colnames(mat))
+
+# Subsetting the SNR plot values to only contain channels of interest
+cur_snr <- cur_snr[cur_snr$marker %in% 
+                     c(rownames(spe)[rowData(spe)$use_channel]), ]
+
+cur_snr %>% ggplot() +
+    geom_point(aes(log2(ps), log2(snr))) +
+    geom_label_repel(aes(log2(ps), log2(snr), label = marker)) +
+    theme_minimal(base_size = 15) + ylab("Signal-to-noise ratio") +
+    xlab("Signal intensity")
+```
+
+### Distributions of cell size across the individual images
+
+```{r cell size, class.output="scroll-100"}
+colData(spe) %>%
+    as.data.frame() %>%
+    group_by(ROI) %>%
+    ggplot() +
+        geom_boxplot(aes(ROI, area)) +
+        theme_minimal(base_size = 15) + 
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +
+        ylab("Cell area") + xlab("")
+
+#table with average cell size and areas:
+summary(spe$area)
+
+# remove very large cells from the dataset:
+sum(spe$area > 150) 
+# remove them from the dataset
+spe <- spe[, spe$area <= 150]
+
+```
+
+### Percentage of image area covered by cells
+
+```{r cells per mm2 }
+colData(spe) %>%
+    as.data.frame() %>%
+    group_by(ROI) %>%
+    summarize(cell_count = n(),
+           no_pixels = mean(width_px) * mean(height_px)) %>%
+    mutate(cells_per_mm2 = cell_count/(no_pixels/1000000)) %>%
+    ggplot() +
+        geom_point(aes(ROI, cells_per_mm2)) + 
+        theme_minimal(base_size = 15)  + 
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +
+        ylab("Cells per mm2") + xlab("")
+```
+
+### Differences in staining patterns
+
+```{r staining QC, class.output="scroll-100", fig.width= 10, fig.height=45 }
+#pdf("allchannels_multidimplot.pdf", width = 15, height = 60)
+multi_dittoPlot(spe, vars = use_channel,
+               group.by = "ROI", 
+               plots = c("ridgeplot"), 
+               assay = "exprs")
+#dev.off()
+```
+
+### UMAP and TSNE plots
+
+```{r UMAP and TSNE, eval=FALSE, include=FALSE}
+set.seed(20221201)
+
+cur_cells_dr <- sample(seq_len(ncol(spe)), 50000)
+
+spe_dr <- spe[, cur_cells_dr]
+
+spe_dr <- runUMAP(spe_dr, exprs_values = "exprs") 
+#spe_dr <- runTSNE(spe_dr, exprs_values = "exprs") 
+
+# store data
+reducedDims(spe_dr)
+
+# inspect data in UMAP
+head(reducedDim(spe_dr, "UMAP"))
+# inspect data in TSNE
+#head(reducedDim(spe_dr, "TSNE"))
+```
+
+### Assessment of potential “batch effects”
+
+```{r compare UMAP and TSNE, eval=FALSE, include=FALSE}
+# visualize patient id 
+p1 <- dittoDimPlot(spe_dr, var = "patient_id", reduction.use = "UMAP", size = 0.2) +
+    ggtitle("Patient ID on UMAP")
+#p2 <- dittoDimPlot(spe, var = "patient_id", reduction.use = "TSNE", size = 0.2) + 
+#    scale_color_manual(values = metadata(spe)$color_vectors$patient_id) +
+ #   ggtitle("Patient ID on TSNE")
+
+# visualize region of interest id
+p3 <- dittoDimPlot(spe_dr, var = "ROI", reduction.use = "UMAP", size = 0.2)  +
+    ggtitle("ROI ID on UMAP")
+#p4 <- dittoDimPlot(spe, var = "ROI", reduction.use = "TSNE", size = 0.2) + 
+#    scale_color_manual(values = metadata(spe)$color_vectors$ROI) +
+#    ggtitle("ROI ID on TSNE")
+
+p5 <- dittoDimPlot(spe_dr, var = "annotation", reduction.use = "UMAP", size = 0.2)  +
+    ggtitle("Annotation on UMAP")
+
+p6 <- dittoDimPlot(spe_dr, var = "condition", reduction.use = "UMAP", size = 0.2)  +
+    ggtitle("Condition on UMAP")
+
+
+#png("umap_metadata.png", width = 1200, height = 1000)
+(p1 + p3)/(p5 + p6)
+#dev.off()
+
+
+```
+
+#Umap with targets overlaid
+
+```{r UMAP target overlay, eval=FALSE, include=FALSE}
+# visualize targets on umap
+plot_list <- multi_dittoDimPlot(spe_dr, var = use_channel, reduction.use = "UMAP", 
+                   assay = "exprs", size = 0.2, list.out = TRUE) 
+
+
+plot_list <- lapply(plot_list, function(x) x + scale_color_viridis())
+
+#png("umap_target.png", width = 1500, height = 900)
+plot_grid(plotlist = plot_list, ncol = 5) 
+#dev.off()
+```
+
+
+### Save data
+
+```{r save spe1}
+saveRDS(spe, file.path("output", "spe1.rds"))
+```
+
