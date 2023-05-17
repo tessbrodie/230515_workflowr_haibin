@@ -1,0 +1,427 @@
+---
+title: "IMC data analysis workflow"
+author: "Tess and Tural"
+date: "University of Bern, DBMR, Visceral and Transplantation Surgery lab"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+## Image visualization
+
+```{r setup, include=FALSE}
+#Setup knitr, incuding path
+knitr::opts_chunk$set(echo = TRUE)
+
+#Important - this path is relative to your dataset, set working directory
+knitr::opts_knit$set(root.dir = "C:/Users/IMC Platform laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haibin")
+
+#Set cache
+knitr::opts_chunk$set(autodep = TRUE, cache = TRUE, cache.lazy = FALSE)
+
+#To make figures
+knitr::opts_chunk$set(dev = "png")
+```
+
+```{css, echo=FALSE}
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+### Load packages 
+
+```{r load-libs, message=FALSE}
+library(SpatialExperiment)
+library(cytomapper)
+library(cowplot)
+library(gridGraphics)
+```
+
+### load data
+
+```{r load data}
+
+spe <- readRDS(file.path("output", "spe3.rds"))
+images <- readRDS("data/images.rds")
+masks <- readRDS("data/masks.rds")
+
+
+# Sample cells
+#cur_cells <- sample(seq_len(ncol(spe)), 2000)
+
+# Sample images 
+
+cur_id <- sample(unique(spe$sample_id), 5)
+cur_images <- images[names(images) %in% cur_id]
+cur_masks <- masks[names(masks) %in% cur_id]
+
+```
+
+### Pixel visualization: Single target expression
+
+```{r tissue_target_ecad, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "E-cadherin",
+           bcg = list("E-cadherin" = c(0, 10, 1)))
+```
+
+```{r tissue_target_panactin, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "Pan-actin",
+           bcg = list("Pan-actin" = c(0, 10, 1)))
+```
+
+```{r tissue_target_CD3, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "CD3e",
+           bcg = list("CD3e" = c(0, 20, 1)))
+```
+
+```{r tissue_target_CD19, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "CD19",
+           bcg = list("CD19" = c(0, 50, 1)))
+```
+
+```{r tissue_target_CD8, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "CD8a",
+           bcg = list("CD8a" = c(0, 10, 1)))
+```
+
+```{r tissue_target_CD4, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "CD4",
+           bcg = list("CD4" = c(0, 20, 1)))
+```
+
+```{r tissue_target_F4_80, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "F4_80",
+           bcg = list("F4_80" = c(0, 30, 1)))
+```
+
+```{r tissue_target_CD206, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "CD206",
+           bcg = list("CD206" = c(0, 20, 1)))
+```
+
+```{r tissue_target_Ki67, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "Ki-67",
+           bcg = list("Ki-67" = c(0, 10, 1)))
+```
+
+```{r tissue_target_CD44, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "CD44",
+           bcg = list("CD44" = c(0, 10, 1)))
+```
+
+```{r tissue_target_CD74, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "CD74",
+           bcg = list("CD74" = c(0, 20, 1)))
+```
+
+```{r tissue_target_aSMA, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "a-SMA",
+           bcg = list("a-SMA" = c(0, 200, 1)))
+```
+
+```{r tissue_target_CD31, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "CD31",
+           bcg = list("CD31" = c(0, 10, 1)))
+```
+
+```{r tissue_target_CD11b, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "CD11b",
+           bcg = list("CD11b" = c(0, 20, 1)))
+```
+
+```{r tissue_target_Ly6G, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = "Ly6-G",
+           bcg = list("Ly6-G" = c(0, 10, 1)))
+```
+
+### Pixel visualization: Multi target expression
+
+```{r tissue_targets_multi1, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = c("E-cadherin","CD206", "CD3e", "CD19", "CD31"),
+           bcg = list("E-cadherin" = c(0, 10, 1),
+                      CD206 = c(0, 20, 1),
+                      CD3e = c(0, 20, 1),
+                      CD19 = c(0, 50, 1),
+                      CD31 = c(0, 10, 1)))
+```
+
+```{r Panactin_F480, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = c("Pan-actin","F4_80", "DNA2"),
+           bcg = list("Pan-actin" = c(0, 8, 1),
+                      "F4_80" = c(0, 30, 1),
+                      DNA2 = c(0, 10, 1)))
+```
+
+```{r Panactin_CD206, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = c("Pan-actin","CD206", "DNA2"),
+           bcg = list("Pan-actin" = c(0, 8, 1),
+                      "CD206" = c(0, 20, 1),
+                      DNA2 = c(0, 10, 1)))
+```
+
+```{r Panactin_CD44, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = c("Pan-actin","CD44", "DNA2"),
+           bcg = list("Pan-actin" = c(0, 8, 1),
+                      "CD44" = c(0, 10, 1),
+                      DNA2 = c(0, 10, 1)))
+```
+
+```{r Panactin_Ki67, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = c("Pan-actin","Ki-67", "DNA2"),
+           bcg = list("Pan-actin" = c(0, 8, 1),
+                      "Ki-67" = c(0, 10, 1),
+                      DNA2 = c(0, 10, 1)))
+```
+
+```{r Panactin_CD11b, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = c("Pan-actin","CD11b", "DNA2"),
+           bcg = list("Pan-actin" = c(0, 8, 1),
+                      "CD11b" = c(0, 20, 1),
+                      DNA2 = c(0, 10, 1)))
+```
+
+```{r Panactin_ecad, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = c("Pan-actin","E-cadherin", "DNA2"),
+           bcg = list("Pan-actin" = c(0, 8, 1),
+                      "E-cadherin" = c(0, 10, 1),
+                      DNA2 = c(0, 10, 1)))
+```
+
+```{r tissue_targets_colorchoose, fig.width=12, fig.height=12}
+plotPixels(cur_images, 
+           colour_by = c("CD206", "Pan-actin", "E-cadherin"),
+           bcg = list(CD206 = c(0, 20, 1),
+                      "Pan-actin" = c(0, 8, 1),
+                      "E-cadherin" = c(0, 10, 1)),
+           colour = list(CD206 = c("black", "burlywood1"),
+                         "Pan-actin" = c("black", "cyan2"),
+                         "E-cadherin" = c("black", "firebrick1")))
+```
+
+### Pixel visualization: different normalizations of images
+
+```{r tissue_targets_normed_acrossall, eval=FALSE, include=FALSE}
+# 0 - 1 channel scaling across all images
+norm_images <- normalize(cur_images)
+
+# Clip channel at 0.2
+#norm_images <- normalize(norm_images, inputRange = c(0, 0.2))
+
+plotPixels(norm_images, 
+           colour_by = c("E-cadherin","CD206", "HNFa", "C16", "CD19", "CD31"))
+```
+
+```{r tissue_targets_normed_perimage, eval=FALSE, include=FALSE}
+# 0 - 1 channel scaling per image
+norm_images <- normalize(cur_images, separateImages = TRUE)
+
+# Clip channel at 0.2
+norm_images <- normalize(norm_images, inputRange = c(0, 0.2))
+
+plotPixels(norm_images, 
+           colour_by = c("E-cadherin","CD206", "HNFa", "16", "CD19", "CD31"))
+```
+
+```{r tissue_targets_normed_manual, eval=FALSE, include=FALSE}
+# 0 - 1 channel scaling per image
+norm_images <- normalize(cur_images, 
+                         separateImages = TRUE,
+                         inputRange = list("E-cadherin" = c(0, 10), 
+                                           CD206 = c(0, 10),
+                                           HNFa = c(0, 10),
+                                           "16" = c(0, 10),
+                                           CD19 = c(0, 10),
+                                           CD31 = c(0, 10)))
+
+plotPixels(norm_images, 
+           colour_by = c("E-cadherin","CD206", "HNFa", "16", "CD19", "CD31"))
+```
+
+### Cell type overlays
+
+```{r celltype_overlay}
+plotCells(cur_masks,
+          object = spe, 
+          cell_id = "ObjectNumber", img_id = "sample_id",
+          colour_by = "celltype")
+```
+
+```{r celltype_overlay_choosecolors}
+plotCells(cur_masks,
+          object = spe, 
+          cell_id = "ObjectNumber", img_id = "sample_id",
+          colour_by = "celltype")
+          colour = list(celltype = metadata(spe)$color_vectors$celltype)
+```
+
+```{r celltype_overlay_onetarget_tumor_red}
+
+tumor <- spe[,spe$celltype == "Tumor"]
+
+plotCells(cur_masks,
+          object = tumor, 
+          cell_id = "ObjectNumber", img_id = "sample_id",
+          colour_by = "celltype",
+          colour = list(celltype = c(Tumor = "red")),
+          missing_colour = "white")
+```
+
+### Cell area overlay
+
+```{r area_overlay}
+plotCells(cur_masks,
+          object = spe, 
+          cell_id = "ObjectNumber", img_id = "sample_id",
+          colour_by = "area")
+```
+
+### Asinh-transformed mean pixel intensities
+
+```{r meanpixel_overlay_onetarget, fig.width=12, fig.height=12}
+plotCells(cur_masks,
+          object = spe, 
+          cell_id = "ObjectNumber", img_id = "sample_id",
+          colour_by = "E-cadherin",
+          exprs_values = "exprs")
+```
+
+```{r meanpixel_overlay_multitarget, fig.width=12, fig.height=12}
+plotCells(cur_masks,
+          object = spe, 
+          cell_id = "ObjectNumber", img_id = "sample_id",
+          colour_by = c("E-cadherin","CD206", "Pan-actin", "CD3e", "CD19", "Ki-67"),
+          exprs_values = "exprs")
+```
+
+```{r meanpixel_overlay_multitarget_manualcolors, fig.width=12, fig.height=12}
+plotCells(cur_masks,
+          object = spe, 
+          cell_id = "ObjectNumber", img_id = "sample_id",
+          colour_by = c("E-cadherin","CD206", "Pan-actin"),
+          exprs_values = "exprs",
+          colour = list("E-cadherin" = c("black", "burlywood1"),
+                          CD206 = c("black", "cyan2"),
+                          "Pan-actin" = c("black", "firebrick1")))
+```
+
+### Outlining cells on images
+
+```{r celloutline_overlay_all}
+plotPixels(image = cur_images,
+           mask = cur_masks,
+           object = spe, 
+           cell_id = "ObjectNumber", img_id = "sample_id",
+           colour_by = c("E-cadherin","CD206", "DNA1"),
+           outline_by = "celltype",
+                      bcg = list("E-cadherin" = c(0, 10, 1),
+                      CD206 = c(0, 20, 1),
+                      DNA1 = c(0, 10, 1)),
+           #colour = list(celltype = metadata(spe)$color_vectors$celltype),
+           thick = TRUE)
+```
+
+```{r celloutline_overlay_onecelltype}
+
+CD8 <- spe[,spe$celltype == "CD8"]
+
+plotPixels(image = cur_images,
+           mask = cur_masks,
+           object = CD8, 
+           cell_id = "ObjectNumber", img_id = "sample_id",
+           colour_by = c("CD3e", "CD8a"),
+           outline_by = "celltype",
+                      bcg = list(CD3e = c(0, 20, 1),
+                      CD8a = c(0, 20, 1)),
+           colour = list(celltype = c("CD8" = "white")),
+           thick = TRUE)
+```
+
+### Adjusting plot annotation
+
+```{r target_overlay_annotated, fig.width=13, fig.height=10, fig.width=12, fig.height=12}
+
+plotPixels(cur_images, 
+           colour_by = c("E-cadherin","CD206", "CD3e", "CD19", "CD31"),
+           bcg = list("E-cadherin" = c(0, 10, 1),
+                      CD206 = c(0, 20, 1),
+                      CD3e = c(0, 20, 1),
+                      CD19 = c(0, 50, 1),
+                      CD31 = c(0, 10, 1)),
+           scale_bar = list(length = 100,
+                            label = expression("100 " ~ mu * "m"),
+                            cex = 0.7, 
+                            lwidth = 10,
+                            colour = "grey",
+                            position = "bottomleft",
+                            margin = c(5,5),
+                            frame = 3),
+           image_title = list(text = mcols(cur_images)$condition,
+                              position = "topright",
+                              colour = "grey",
+                              margin = c(5,5),
+                              font = .5,
+                              cex = 2),
+           legend = list(colour_by.title.cex = 0.7,
+                         margin = 10),
+           margin = 40)
+```
+
+### Display individual images
+
+```{r celltype_overlay_oneimage}
+plotCells(cur_masks,
+          object = spe, 
+          cell_id = "ObjectNumber", img_id = "sample_id",
+          colour_by = "celltype",
+          #colour = list(celltype = metadata(spe)$color_vectors$celltype),
+          display = "single",
+          legend = NULL)
+```
+
+### Save and return images
+
+```{r, save and return images, eval=FALSE, include=FALSE}
+out1 <- plotCells(cur_masks,
+                  object = spe, 
+                  cell_id = "ObjectNumber", img_id = "sample_id",
+                  colour_by = "celltype",
+                  #colour = list(celltype = metadata(spe)$color_vectors$celltype),
+                  return_plot = TRUE)
+
+out2 <- plotCells(cur_masks,
+                  object = spe, 
+                  cell_id = "ObjectNumber", img_id = "sample_id",
+                  colour_by = c("Pan-actin", "CD3e", "CD206"),
+                  exprs_values = "exprs",
+                  return_plot = TRUE)
+
+p1 <- ggdraw(out1$plot, clip = "on")
+p2 <- ggdraw(out2$plot, clip = "on")
+
+plot_grid(p1, p2)
+```
