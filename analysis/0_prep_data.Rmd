@@ -1,0 +1,178 @@
+---
+title: "IMC data analysis workflow"
+author: "Tess and Tural"
+date: "University of Bern, DBMR, Visceral and Transplantation Surgery lab"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+#### Prepare data
+
+```{r setup, include=FALSE}
+#Setup knitr, incuding path
+knitr::opts_chunk$set(
+	echo = TRUE,
+	autodep = TRUE,
+	cache = TRUE,
+	cache.lazy = FALSE,
+	dev = "png"
+)
+#Important - this path is relative to your dataset, set working directory
+knitr::opts_knit$set(root.dir = "C:/Users/IMC Platform laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haibin")
+
+#Set cache
+knitr::opts_chunk$set(autodep = TRUE, cache = TRUE, cache.lazy = FALSE)
+
+#To make figures
+knitr::opts_chunk$set(dev = "png")
+```
+
+```{css, echo=FALSE}
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+### Load packages
+
+```{r load-libs, message=FALSE}
+library(imcRtools)
+library(cytomapper)
+library(openxlsx)
+library(stringr)
+library(dittoSeq)
+library(RColorBrewer)
+library(CATALYST)
+library(gtools)
+```
+
+### Load data
+
+```{r load-data, class.output="scroll-100"}
+#construct Spatial experiment (SPE)
+spe <- read_steinbock("./data/")
+
+#Assign sample names to cells
+colnames(spe) <- paste0(spe$sample_id, "_", spe$ObjectNumber)
+#Check SPE
+spe
+```
+
+### Check 1 - SPE object
+
+```{r, class.output="scroll-100"}
+counts(spe)[1:5, 1:5]
+head(colData(spe))
+head(spatialCoords(spe))
+colPair(spe, "neighborhood")
+head(rowData(spe))
+```
+
+### Add metadata 
+
+```{r metadata}
+#Metadata table loading
+meta <- read.xlsx("./data/sample_metadata_shortened.xlsx")
+
+# Set patient ID and ROI and condition names
+spe$patient_id <- meta$patient_id[match(spe$sample_id, meta$sample_id)]
+
+#Factor ordering the ROI IDs for better plotting
+spe$ROI <- meta$ROI[match(spe$sample_id, meta$sample_id)]
+spe$ROI <- factor(spe$ROI, levels = mixedsort(unique(spe$ROI)))
+
+spe$condition <- meta$condition[match(spe$sample_id, meta$sample_id)]
+spe$annotation <- meta$annotation[match(spe$sample_id, meta$sample_id)]
+
+spe@metadata$meta_final <- meta
+
+```
+
+### Check 2 - metadata
+
+```{r checkmetadata, class.output="scroll-100"}
+unique(spe$patient_id)
+unique(spe$ROI)
+unique(spe$condition)
+unique(spe$annotation)
+```
+
+### Rename sample_id and patient_id with shorter name
+
+```{r eval=FALSE, include=FALSE}
+#spe$sample_id <- factor(spe$sample_id)
+
+#levels(spe$sample_id) <- c("1", "2", "3", "4", "5", "6")
+
+#spe$patient_id <- factor(spe$patient_id)
+
+#levels(spe$patient_id) <- c("1", "2", "3", "4", "5", "6")
+```
+
+### Check 3 - before arcsinh transformation
+
+```{r before_arcsinh, fig.height=15, fig.width= 6}
+dittoRidgePlot(spe, var = "E-cadherin", group.by = "ROI", assay = "counts") +
+    ggtitle("E-cadherin - before transformation")
+```
+
+### Check 4 - after transformation
+
+```{r after_arcsinh, fig.height=15, fig.width= 6}
+assay(spe, "exprs") <- asinh(counts(spe)/1)
+dittoRidgePlot(spe, var = "E-cadherin", group.by = "ROI", assay = "exprs") +
+    ggtitle("E-cadherin - after transformation")
+```
+
+```{r filterdata }
+#Exclude unwanted channels if of interest
+
+rowData(spe)$use_channel <- grepl("a-SMA|CD19|HNFa|CD11b|F4_80|CD44|CD3e|E-cadherin|Ly6-G|CD206|Arginase-1|CD4|CD74|CD8a|Ki-67|CD31|Pan-actin|HistoneH3|DNA1|DNA2", rownames(spe))
+```
+
+### Plot cell counts
+
+```{r, cellcounts, fig.width=8, fig.height=5}
+plotCounts(spe, 
+    group_by = "ROI", 
+    color_by = "condition") +
+            ylim(0, 15000)
+```
+
+### Define colors
+
+```{r set colors, eval=FALSE, class.output="scroll-100", include=FALSE}
+#color_vectors <- list()
+#For the ROI
+#ROI <- setNames(brewer.pal(length(unique(spe$ROI)), name = "BrBG"), 
+#                unique(spe$ROI))
+#For the patient ID
+#patient_id <- setNames(brewer.pal(length(unique(spe$patient_id)), name = "Set1"), 
+#                unique(spe$patient_id))
+#For the sample ID
+#sample_id <- setNames(dittoColors(reps = 1)[seq_along(unique(spe$sample_id))], 
+#                unique(spe$sample_id))
+#For the condition
+#condition <- setNames(brewer.pal(length(unique(spe$condition)), name = "Set2"), 
+#                unique(spe$condition))
+
+#color_vectors$ROI <- ROI
+#color_vectors$patient_id <- patient_id
+#color_vectors$sample_id <- sample_id
+#color_vectors$condition <- condition
+
+#metadata(spe)$color_vectors <- color_vectors
+```
+
+## Save SPE
+
+```{r savedata spe0}
+saveRDS(spe, file.path("output", "spe0.rds"))
+```
+
+
+
+
