@@ -1,0 +1,153 @@
+---
+title: "IMC data analysis workflow"
+author: "Tess and Tural"
+date: "University of Bern, DBMR, Visceral and Transplantation Surgery lab"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+# Cell annotation IMCA
+
+```{r setup, include=FALSE}
+#Setup knitr, incuding path
+knitr::opts_chunk$set(echo = TRUE)
+
+#Important - this path is relative to your dataset, set working directory
+knitr::opts_knit$set(root.dir = "C:/Users/IMC Platform laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haibin")
+
+#Set cache
+knitr::opts_chunk$set(autodep = TRUE, cache = TRUE, cache.lazy = FALSE)
+
+#To make figures
+knitr::opts_chunk$set(dev = "png")
+```
+
+```{css, echo=FALSE}
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+### Load packages 
+
+```{r load-libs, message=FALSE}
+library(SpatialExperiment)
+library(Rphenograph)
+library(igraph)
+library(dittoSeq)
+library(viridis)
+library(bluster)
+library(BiocParallel)
+library(ggplot2)
+library(scran)
+library(CATALYST)
+library(kohonen)
+library(ConsensusClusterPlus)
+library(patchwork)
+library(pheatmap)
+library(gridExtra)
+library(cytomapper)
+library(Rphenoannoy)
+library(SingleCellExperiment)
+library(caret)
+library(ggridges)
+library(patchwork)
+library(pheatmap)
+library(gridExtra)
+library(scuttle)
+library(stringr)
+library(tidyverse)
+
+```
+
+
+```{r load model reports, eval=FALSE, include=FALSE}
+#![Sensitivity and specificity](output/SensitivitySpecificity.png)
+#![Celltype probability](output/CelltypeProbability.png)
+```
+
+```{r renaming patient_id to donor_id, eval=FALSE, include=FALSE}
+spe <- readRDS(file.path("output", "spe1.rds"))
+#This is done to be compatible with the annotation app - temporary fix
+colnames(spe@metadata$meta_final)[5] <- "donor_id"
+colnames(colData(spe))[9] <- "donor_id"
+
+saveRDS(spe, file.path("output", "spe1_imca.rds"))
+```
+
+### Load data
+
+```{r load data}
+
+images <- readRDS(file.path("data", "images.rds"))
+masks <- readRDS(file.path("data", "masks.rds"))
+
+rffit <- readRDS(file.path("output", "rffit.rds"))
+
+spe <- readRDS(file.path("output", "spe_ca.rds"))
+
+```
+
+```{r classifier performance}
+ggplot(rffit$classifier) + 
+  geom_errorbar(data = rffit$classifier$results,
+                aes(ymin = Accuracy - AccuracySD,
+                    ymax = Accuracy + AccuracySD),
+                width = 0.4) +
+    theme_classic(base_size = 15)
+
+plot(varImp(rffit$classifier))
+
+rffit$classifier$finalModel$confusion
+
+```
+
+
+```{r prepare new data}
+
+ann_mat <- t(assay(spe, "exprs"))
+
+```
+
+```{r annotate new data}
+
+cell_class <- as.character(predict.train(rffit$classifier, 
+                                         newdata = ann_mat, 
+                                         type = "raw"))
+
+names(cell_class) <- rownames(ann_mat)
+
+cell_prob <- predict.train(rffit$classifier, 
+                           newdata = ann_mat, 
+                           type = "prob")
+
+# Label undefined cells
+cell_class[rowMax(as.matrix(cell_prob)) < 0.4] <- "undefined"
+
+# Distribution of maximum probabilities
+tibble(max_prob = rowMax(as.matrix(cell_prob)),
+       type = cell_class) %>%
+    ggplot() +
+        geom_density_ridges(aes(x = max_prob, y = cell_class, fill = cell_class)) +
+#        scale_fill_manual(values = metadata(spe)$color_vectors$celltype) +
+        theme_classic(base_size = 15) +
+        xlab("Maximum probability") +
+        ylab("Cell type") + 
+        xlim(c(0,1.2))
+
+
+# Store labels in SpatialExperiment object
+spe$celltype <- cell_class
+
+table(spe$celltype, spe$sample_id)
+```
+
+### Save data
+
+```{r save spe2}
+saveRDS(spe, file.path("output", "spe_ca.rds"))
+```
+
