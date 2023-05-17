@@ -1,5 +1,5 @@
 ---
-title: "Home"
+title: "Contents"
 site: workflowr::wflow_site
 output:
   workflowr::wflow_html:
@@ -8,4 +8,48 @@ editor_options:
   chunk_output_type: console
 ---
 
-Welcome to my research website.
+#### This work pipeline is from the IMC Data Analysis Workflow written at https://bodenmillergroup.github.io/IMCDataAnalysis/
+
+#### Dataset:Haibin and Thomas mouse lung cancer project
+
+#### Analysis performed by Tess and Tural 230517
+
+- [Data preparation](0_prep_data.html):
+    - construct `SpatialExperiment`
+    - single-cell processing
+    - read in images
+    
+- [Quality control mask](1_QC_mask.html):
+    - Segmentation quality control
+    - Image and cell level quality control
+    
+- [Cell annotation](2_IMCA_cell_annotation.html):
+    - Prepare spe for IMCA annotation
+    - Check annotation
+    
+- [Single cell visualization](3_dim_red.html):
+    - UMAP visualization
+    - Heatmaps
+    - Boxplots
+    - Violin plots
+    - MDS plots
+
+- [Image visualization](4_img_vis.html):
+    - Pixel visualization
+    - Cell visualization
+    - Adjusting plot annotations
+    - Displaying, saving and returning images
+    
+- [Spatial visualization](5_spatial_vis.html):
+    - Spatial interaction graphs
+    - Spatial visualization
+    - Spatial community analysis
+    - Cellular neighborhood analysis
+    - Spatial context analysis
+    - Patch detection
+    - Interaction analysis
+
+- [Statistics](6_statistics.html):
+    - Differential abundance testing with `edgeR`
+    - Differential state testing with `diffcyte`
+    - Future:neighborhoods testing

@@ -3,12 +3,26 @@ output_dir: ../docs
 navbar:
   title: "230515_workflowr_haibin"
   left:
-  - text: Home
+  - text: Contents
     href: index.html
-  - text: About
-    href: about.html
-  - text: License
-    href: license.html
+  - text: Data prep
+    href: 0_prep_data.html
+  - text: QC mask
+    href: 1_QC_mask.html
+  - text: Cell ann
+    href: 2_IMCA_cell_annotation.html
+  - text: Dim red
+    href: 3_dim_red.html
+  - text: Img vis
+    href: 4_img_vis.html
+  - text: Spatial
+    href: 5_spatial_vis.html
+  - text: Stats
+    href: 6_statistics.html
+  right:
+  - icon: fab fa-github
+    text: Source code
+    href: https://github.com/tessbrodie/230515_workflowr_haibin
 output:
   workflowr::wflow_html:
     toc: yes
