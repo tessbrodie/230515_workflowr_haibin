@@ -1,0 +1,468 @@
+---
+title: "IMC data analysis workflow"
+author: "Tess and Tural"
+date: "University of Bern, DBMR, Visceral and Transplantation Surgery lab"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+# Dimensionality reduction 
+
+```{r setup, include=FALSE}
+#Setup knitr, incuding path
+knitr::opts_chunk$set(echo = TRUE)
+
+#Important - this path is relative to your dataset, set working directory
+knitr::opts_knit$set(root.dir = "C:/Users/IMC Platform laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haibin")
+
+#Set cache
+knitr::opts_chunk$set(autodep = TRUE, cache = TRUE, cache.lazy = FALSE)
+
+#To make figures
+knitr::opts_chunk$set(dev = "png")
+```
+
+```{css, echo=FALSE}
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+### Load packages 
+
+```{r load-libs, message=FALSE}
+library(SpatialExperiment)
+library(Rphenograph)
+library(igraph)
+library(dittoSeq)
+library(viridis)
+library(bluster)
+library(BiocParallel)
+library(ggplot2)
+library(scran)
+library(CATALYST)
+library(kohonen)
+library(ConsensusClusterPlus)
+library(patchwork)
+library(pheatmap)
+library(gridExtra)
+library(cytomapper)
+library(Rphenoannoy)
+library(SingleCellExperiment)
+library(caret)
+library(ggridges)
+library(openxlsx)
+library(stringr)
+library(imcRtools)
+library(cytomapper)
+library(SpatialExperiment)
+library(cytomapper)
+library(scater)
+library(patchwork)
+library(cowplot)
+library(viridis)
+library(scuttle)
+library(CATALYST)
+library(ComplexHeatmap)
+library(circlize)
+library(tidyverse)
+library(gtools)
+library(RColorBrewer)
+library(scuttle)
+```
+
+### Load data
+
+```{r load data}
+spe <- readRDS(file.path("output", "spe_ca.rds"))
+
+# Sample cells
+#cur_cells <- sample(seq_len(ncol(spe)), 2000)
+```
+
+### Add metadata 
+
+```{r metadata}
+#Metadata table loading
+meta <- read.xlsx("./data/sample_metadata_shortened.xlsx")
+
+# Set patient ID and ROI and condition names
+spe$patient_id <- meta$patient_id[match(spe$sample_id, meta$sample_id)]
+spe$patient_id <- factor(spe$patient_id)
+
+#Factor ordering the ROI IDs for better plotting
+spe$ROI <- meta$ROI[match(spe$sample_id, meta$sample_id)]
+spe$ROI <- factor(spe$ROI, levels = mixedsort(unique(spe$ROI)))
+
+spe$condition <- meta$condition[match(spe$sample_id, meta$sample_id)]
+spe$annotation <- meta$annotation[match(spe$sample_id, meta$sample_id)]
+
+spe@metadata$meta_final <- meta
+
+```
+
+### Check 2 - metadata
+
+```{r checkmetadata, class.output="scroll-100"}
+unique(spe$patient_id)
+unique(spe$ROI)
+unique(spe$condition)
+unique(spe$annotation)
+```
+
+
+### Dimensionality reduction: annotated cells
+
+```{r celltype overlay UMAP}
+dittoDimPlot(spe, 
+             var = "celltype",
+             reduction.use = "UMAP", 
+             size = 0.2,
+             do.label = TRUE) +
+    ggtitle("IMCA annotated cell types overlaid on UMAP")
+
+```
+
+#Celltype UMAP split by condition
+
+```{r celltype by condition, fig.width= 10, fig.height= 12}
+#Sample 10% of the dataset
+spe_small <- spe[, sample(ncol(spe), round(ncol(spe)/10))]
+
+p1 <- dittoDimPlot(spe_small, 
+             var = "celltype",
+             split.by = "condition",
+             reduction.use = "UMAP", 
+             size = 0.6,
+             do.label = FALSE)
+
+p2 <-dittoBarPlot(spe, var = "celltype", group.by = "condition")
+p3 <-dittoBarPlot(spe, var = "condition", group.by = "celltype")
+
+plot_grid(p1, p2, p3,
+          ncol = 1)
+
+```
+
+#Celltype UMAP split by annotation
+
+```{r celltype by annotation, fig.width= 10, fig.height= 12}
+
+p1 <-dittoDimPlot(spe_small, 
+             var = "celltype",
+             split.by = "annotation",
+             reduction.use = "UMAP", 
+             size = 0.6,
+             do.label = FALSE)
+
+p2 <-dittoBarPlot(spe, var = "celltype", group.by = "annotation")
+p3 <-dittoBarPlot(spe, var = "annotation", group.by = "celltype")
+
+plot_grid(p1, p2, p3,
+          ncol = 1)
+
+```
+
+#Celltype UMAP split by patient ID
+
+```{r celltype by patientID, fig.width= 10, fig.height= 16}
+
+p1 <-dittoDimPlot(spe_small, 
+             var = "celltype",
+             split.by = "donor_id",
+             reduction.use = "UMAP", 
+             size = 0.6,
+             do.label = FALSE)
+
+p2 <-dittoBarPlot(spe, var = "celltype", group.by = "donor_id")
+p3 <-dittoBarPlot(spe, var = "donor_id", group.by = "celltype")
+
+plot_grid(p1, p2, p3,
+          ncol = 1)
+
+```
+
+#Celltype UMAP split by ROI
+
+```{r celltype by ROI, fig.width= 10, fig.height= 16}
+
+p1 <-dittoDimPlot(spe_small, 
+             var = "celltype",
+             split.by = "ROI",
+             reduction.use = "UMAP", 
+             size = 0.6,
+             do.label = FALSE)
+
+p2 <-dittoBarPlot(spe, var = "celltype", 
+             group.by = "ROI", 
+             x.reorder = mixedorder(metaLevels("ROI", spe)))
+p3 <-dittoBarPlot(spe, var = "ROI", group.by = "celltype")
+
+plot_grid(p1, p2, p3,
+          ncol = 1)
+
+```
+
+# Target expression UMAPs
+
+```{r UMAP target exprs, fig.width= 12, fig.height= 12}
+
+# Define markers
+markers <- c("E-cadherin", "Arginase-1", "CD19", "CD3e", "Pan-actin", "CD206", "HNFa", "a-SMA", "CD8a", "CD4", "CD11b", "Ly6-G", "CD31", "F4_80", "Ki-67", "CD44", "CD74")
+
+#Multiple marker plots
+plot_list <- multi_dittoDimPlot(spe_small, 
+                                var = markers, 
+                                assay = "exprs", 
+                                reduction.use = "UMAP",
+                                list.out = TRUE,
+                                size = 0.2)
+
+plot_list <- lapply(plot_list, function(x) x + scale_color_viridis())
+
+plot_grid(plotlist = plot_list)
+```
+
+# Single target plots
+
+```{r target overlay UMAP, eval=FALSE, include=FALSE}
+#Single marker plots
+
+#E-cadherin plot split by condition
+p1 <- dittoDimPlot(spe_small, 
+             var = "E-cadherin",
+             split.by = "condition",
+             assay = "exprs", 
+             reduction.use = "UMAP", 
+             size = 0.6,
+             do.label = FALSE) + scale_color_viridis()
+
+#E-cadherin plot split by annotation
+p2 <- dittoDimPlot(spe_small, 
+             var = "E-cadherin",
+             split.by = "annotation",
+             assay = "exprs",
+             reduction.use = "UMAP", 
+             size = 0.6,
+             do.label = FALSE) + scale_color_viridis()
+
+#E-cadherin plot split by patient ID
+p3 <- dittoDimPlot(spe_small, 
+             var = "E-cadherin",
+             split.by = "donor_id",
+             assay = "exprs",
+             reduction.use = "UMAP", 
+             size = 0.6,
+             do.label = FALSE) + scale_color_viridis()
+
+plot_grid(p1, p2, p3,
+          ncol = 1)
+
+```
+
+# Get rid of useless channels
+
+```{r filterdata}
+#Exclude unwanted channels 
+
+rowData(spe)$use_channel <- grepl("a-SMA|CD19|HNFa|CD11b|F4_80|CD44|CD3e|E-cadherin|Ly6-G|CD206|Arginase-1|CD4|CD74|CD8a|Ki-67|CD31|Pan-actin|HistoneH3|DNA1|DNA2", rownames(spe))
+```
+
+### Define colors
+
+```{r set colors}
+
+color_vectors <- list()
+
+#For the ROI
+ROI <- setNames(dittoColors(reps = 1)[seq_along(unique(spe$sample_id))], 
+                unique(spe$ROI))
+#For the patient ID
+patient_id <- setNames(brewer.pal(length(unique(spe$patient_id)), name = "Set1"), 
+                unique(spe$patient_id))
+#For the sample ID
+sample_id <- setNames(dittoColors(reps = 1)[seq_along(unique(spe$sample_id))], 
+                unique(spe$sample_id))
+#For the condition
+condition <- setNames(brewer.pal(length(unique(spe$condition)), name = "Set2"), 
+                unique(spe$condition))
+#For the annotation
+annotation <- setNames(brewer.pal(length(unique(spe$annotation)), name = "Set3"), 
+                unique(spe$annotation))
+#For cell type
+annotation <- setNames(brewer.pal(length(unique(spe$annotation)), name = "Set3"), 
+                unique(spe$annotation))
+
+color_vectors$ROI <- ROI
+color_vectors$patient_id <- patient_id
+color_vectors$sample_id <- sample_id
+color_vectors$condition <- condition
+color_vectors$annotation <- annotation
+
+metadata(spe)$color_vectors <- color_vectors
+```
+
+# Heatmap visualization
+
+```{r IMCA cell types heatmap singlecell, fig.width= 10, fig.height= 10}
+
+# Sample cells
+cur_cells <- sample(seq_len(ncol(spe)), 40000)
+
+dittoHeatmap(spe[, cur_cells], 
+             genes = rowData(spe)$use_channel,
+             assay = "exprs", scale = "none",
+             heatmap.colors = viridis(100), 
+             annot.by = c("celltype", "condition", "annotation", "patient_id"),
+             annot.colors = c(dittoColors(1)[1:length(unique(spe$celltype))], metadata(spe)$color_vectors$condition, metadata(spe)$color_vectors$annotation, metadata(spe)$color_vectors$patient_id))
+             
+```
+
+
+```{r heatmap_cellsaggregated, fig.width= 10, fig.height= 10}
+
+# Define type markers
+type_markers <- c("E-cadherin", "Arginase-1", "CD19", "CD3e", "Pan-actin", "CD206", "HNFa", "a-SMA", "CD8a", "CD4", "CD11b", "Ly6-G", "CD31", "F4_80", "Ki-67", "CD44", "CD74")
+
+state_markers <- c("HistoneH3", "DNA1")
+
+
+# Add to spe
+rowData(spe)$marker_class <- ifelse(rownames(spe) %in% type_markers, "type",
+                                    ifelse(rownames(spe) %in% state_markers, "state", 
+                                    "other"))
+
+## by cell type
+celltype_mean <- aggregateAcrossCells(as(spe, "SingleCellExperiment"),  
+                     ids = spe$celltype, 
+                     statistics = "mean",
+                     use.assay.type = "exprs", 
+                     subset.row = rownames(spe)[rowData(spe)$marker_class == "type"]
+                     )
+
+# No scaling
+dittoHeatmap(celltype_mean,
+             assay = "exprs", cluster_cols = TRUE, 
+             scale = "none",
+             heatmap.colors = viridis(100),
+             annot.by = c("celltype","ncells"))
+             annotation_colors = list(celltype = metadata(spe)$color_vectors$celltype,
+                                      ncells = plasma(100))
+```
+
+```{r heatmap_cellsaggreg_minmax, fig.width= 10, fig.height= 10}
+# Min-max expression scaling
+dittoHeatmap(celltype_mean,
+             assay = "exprs", cluster_cols = TRUE, 
+             scaled.to.max = TRUE,
+             heatmap.colors.max.scaled = inferno(100),
+             annot.by = c("celltype","ncells"))
+             annotation_colors = list(celltype = metadata(spe)$color_vectors$celltype,
+                                     ncells = plasma(100))
+```
+
+### Violin plot visualization
+
+```{r violinplot_expression, fig.width= 8, fig.height= 12}
+#Violin Plot - plotExpression
+plotExpression(spe[,cur_cells], 
+               features = rownames(spe)[rowData(spe)$marker_class == "type"],
+               x = "celltype", exprs_values = "exprs", 
+               colour_by = "celltype") +
+    theme(axis.text.x =  element_text(angle = 90))
+    scale_color_manual(values = metadata(spe)$color_vectors$celltype)
+```
+
+### Scatter plot visualization
+
+```{r scatterplot}
+#Scatter plot
+dittoScatterPlot(spe, 
+                 x.var = "CD3e", y.var="CD19", 
+                 assay.x = "exprs", assay.y = "exprs", 
+                 color.var = "celltype") +
+    #scale_color_manual(values = metadata(spe)$color_vectors$celltype) +
+    ggtitle("Scatterplot for CD3/CD20 labelled by celltype")
+```
+
+### Barplot visualization
+
+```{r barplot_sampleID}
+# by sample_id
+dittoBarPlot(spe, var = "celltype", group.by = "ROI") 
+    scale_fill_manual(values = metadata(spe)$color_vectors$celltype)
+```
+
+```{r barplot_patientID_percentage}
+# by patient_id - percentage
+dittoBarPlot(spe, var = "celltype", group.by = "patient_id") 
+    scale_fill_manual(values = metadata(spe)$color_vectors$celltype)
+```
+
+```{r barplot_patientID_count}
+# by patient_id - count
+dittoBarPlot(spe, scale = "count", var = "celltype", group.by = "patient_id") 
+    scale_fill_manual(values = metadata(spe)$color_vectors$celltype)
+```
+
+### CATALYST Pseudobulk-level MDS plots
+
+```{r CATALST_setup}
+# save spe in CATALYST-compatible object with renamed colData entries and 
+# new metadata information
+spe_cat <- spe 
+
+spe_cat$sample_id <- factor(spe$sample_id)
+spe_cat$condition <- factor(spe$condition)
+spe_cat$cluster_id <- factor(spe$celltype)
+spe_cat$annotation <- factor(spe$annotation)
+
+#add celltype information to metadata
+metadata(spe_cat)$cluster_codes <- data.frame(celltype = factor(spe_cat$celltype))
+```
+
+```{r MDS_plot_celltype, fig.width= 10, fig.height= 12}
+# MDS pseudobulk by cell type
+pbMDS(spe_cat, by = "cluster_id", 
+      features = rownames(spe_cat)[rowData(spe_cat)$marker_class == "type"], 
+      label_by = "cluster_id", k = "celltype") 
+  scale_color_manual(values = metadata(spe_cat)$color_vectors$celltype)
+```
+
+```{r MDS_plot_celltype_condition, fig.width= 10, fig.height= 12}
+# MDS pseudobulk by cell type and sample_id
+pbMDS(spe_cat, by = "both", 
+      features = rownames(spe_cat)[rowData(spe_cat)$marker_class == "type"], 
+      k = "celltype", shape_by = "condition", 
+      size_by = TRUE) 
+  scale_color_manual(values = metadata(spe_cat)$color_vectors$celltype)
+```
+
+```{r MDS_plot_ann, fig.width= 12, fig.height= 10}
+
+# MDS pseudobulk by ann
+
+pbMDS(spe_cat, by = "sample_id", 
+      color_by = "annotation", 
+      features = rownames(spe_cat)[rowData(spe_cat)$marker_class == "type"]) 
+  scale_color_manual(values = metadata(spe_cat)$color_vectors$ROI)
+  
+```
+
+### Pseudobulk expression boxplot
+
+```{r boxplots, fig.width= 12, fig.height= 10}
+plotPbExprs(spe_cat, k = "celltype", 
+            facet_by = "cluster_id", ncol = 4, 
+            features = rownames(spe_cat)[rowData(spe_cat)$marker_class == "type"]) 
+    scale_color_manual(values = metadata(spe_cat)$color_vectors$indication)
+```
+
+### Save data
+
+```{r save spe3}
+saveRDS(spe, file.path("output", "spe3.rds"))
+```
