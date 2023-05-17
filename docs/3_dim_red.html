@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Tess and Tural" />
+
+
+<title>IMC data analysis workflow</title>
+
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.4.0/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.0/css/v4-shims.min.css" rel="stylesheet" />
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">230515_workflowr_haibin</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Contents</a>
+</li>
+<li>
+  <a href="0_prep_data.html">Data prep</a>
+</li>
+<li>
+  <a href="1_QC_mask.html">QC mask</a>
+</li>
+<li>
+  <a href="2_IMCA_cell_annotation.html">Cell ann</a>
+</li>
+<li>
+  <a href="3_dim_red.html">Dim red</a>
+</li>
+<li>
+  <a href="4_img_vis.html">Img vis</a>
+</li>
+<li>
+  <a href="5_spatial_vis.html">Spatial</a>
+</li>
+<li>
+  <a href="6_statistics.html">Stats</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/tessbrodie/230515_workflowr_haibin">
+    <span class="fab fa-github"></span>
+     
+    Source code
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">IMC data analysis workflow</h1>
+<h4 class="author">Tess and Tural</h4>
+<h4 class="date">University of Bern, DBMR, Visceral and Transplantation
+Surgery lab</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> </a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2023-05-17
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 1
+</p>
+<p>
+<strong>Knit directory:</strong> <code>230515_workflowr_haibin/</code>
+<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.0). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20230515code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20230515)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20230515code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20230515)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongabsolute">
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> <strong>File paths:</strong> absolute </a>
+</p>
+</div>
+<div id="strongFilepathsstrongabsolute" class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Using absolute paths to the files within your workflowr project makes it
+difficult for you and others to run your code on a different machine.
+Change the absolute path(s) below to the suggested relative path(s) to
+make your code more reproducible.
+</p>
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th style="text-align:left;">
+absolute
+</th>
+<th style="text-align:left;">
+relative
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+C:/Users/IMC Platform
+laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haibin
+</td>
+<td style="text-align:left;">
+.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongdf8bfef">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong> df8bfef
+</a>
+</p>
+</div>
+<div id="strongRepositoryversionstrongdf8bfef"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version df8bfef.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+    Ignored:    analysis/0_prep_data_cache/
+    Ignored:    analysis/1_QC_mask_cache/
+    Ignored:    analysis/2_IMCA_cell_annotation_cache/
+    Ignored:    analysis/4_img_vis_cache/
+    Ignored:    analysis/6_statistics_cache/
+
+Untracked files:
+    Untracked:  3_communities_v2.png
+    Untracked:  6_communities_v3.png
+    Untracked:  analysis/4_img_vis.Rmd
+    Untracked:  analysis/5_spatial_vis.Rmd
+    Untracked:  analysis/6_statistics.Rmd
+    Untracked:  analysis/6_statistics_v2.Rmd
+    Untracked:  data/images.csv
+    Untracked:  data/images.rds
+    Untracked:  data/img/
+    Untracked:  data/intensities/
+    Untracked:  data/masks.rds
+    Untracked:  data/masks/
+    Untracked:  data/neighbors/
+    Untracked:  data/panel.csv
+    Untracked:  data/raw/
+    Untracked:  data/regionprops/
+    Untracked:  data/sample_metadata.xlsx
+    Untracked:  data/sample_metadata_shortened.xlsx
+    Untracked:  output/rffit.rds
+    Untracked:  output/spe0.rds
+    Untracked:  output/spe1.rds
+    Untracked:  output/spe3.rds
+    Untracked:  output/spe4.rds
+    Untracked:  output/spe_ca.rds
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/3_dim_red.Rmd</code>) and HTML
+(<code>docs/3_dim_red.html</code>) files. If you’ve configured a remote
+Git repository (see <code>?wflow_git_remote</code>), click on the
+hyperlinks in the table below to view the files as they were in that
+past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+df8bfef
+</td>
+<td>
+Tess Brodie
+</td>
+<td>
+2023-05-17
+</td>
+<td>
+wflow_publish("analysis/3_dim_red.Rmd", delete_cache = TRUE)
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="dimensionality-reduction" class="section level1">
+<h1>Dimensionality reduction</h1>
+<style type="text/css">
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+</style>
+<div id="load-packages" class="section level3">
+<h3>Load packages</h3>
+<pre class="r"><code>library(SpatialExperiment)</code></pre>
+<pre><code>Warning: multiple methods tables found for &#39;aperm&#39;</code></pre>
+<pre><code>Warning: replacing previous import &#39;BiocGenerics::aperm&#39; by
+&#39;DelayedArray::aperm&#39; when loading &#39;SummarizedExperiment&#39;</code></pre>
+<pre><code>Warning: replacing previous import &#39;BiocGenerics::aperm&#39; by
+&#39;DelayedArray::aperm&#39; when loading &#39;HDF5Array&#39;</code></pre>
+<pre class="r"><code>library(Rphenograph)</code></pre>
+<pre><code>Warning: package &#39;ggplot2&#39; was built under R version 4.2.3</code></pre>
+<pre><code>Warning: package &#39;igraph&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(igraph)
+library(dittoSeq)
+library(viridis)</code></pre>
+<pre><code>Warning: package &#39;viridis&#39; was built under R version 4.2.3</code></pre>
+<pre><code>Warning: package &#39;viridisLite&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(bluster)
+library(BiocParallel)
+library(ggplot2)
+library(scran)
+library(CATALYST)
+library(kohonen)
+library(ConsensusClusterPlus)
+library(patchwork)
+library(pheatmap)
+library(gridExtra)
+library(cytomapper)</code></pre>
+<pre><code>Warning: package &#39;EBImage&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(Rphenoannoy)
+library(SingleCellExperiment)
+library(caret)</code></pre>
+<pre><code>Warning: package &#39;caret&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(ggridges)
+library(openxlsx)
+library(stringr)
+library(imcRtools)
+library(cytomapper)
+library(SpatialExperiment)
+library(cytomapper)
+library(scater)
+library(patchwork)
+library(cowplot)
+library(viridis)
+library(scuttle)
+library(CATALYST)
+library(ComplexHeatmap)
+library(circlize)
+library(tidyverse)</code></pre>
+<pre><code>Warning: package &#39;tibble&#39; was built under R version 4.2.3</code></pre>
+<pre><code>Warning: package &#39;dplyr&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(gtools)
+library(RColorBrewer)
+library(scuttle)</code></pre>
+</div>
+<div id="load-data" class="section level3">
+<h3>Load data</h3>
+<pre class="r"><code>spe &lt;- readRDS(file.path(&quot;output&quot;, &quot;spe_ca.rds&quot;))
+
+# Sample cells
+#cur_cells &lt;- sample(seq_len(ncol(spe)), 2000)</code></pre>
+</div>
+<div id="add-metadata" class="section level3">
+<h3>Add metadata</h3>
+<pre class="r"><code>#Metadata table loading
+meta &lt;- read.xlsx(&quot;./data/sample_metadata_shortened.xlsx&quot;)
+
+# Set patient ID and ROI and condition names
+spe$patient_id &lt;- meta$patient_id[match(spe$sample_id, meta$sample_id)]
+spe$patient_id &lt;- factor(spe$patient_id)
+
+#Factor ordering the ROI IDs for better plotting
+spe$ROI &lt;- meta$ROI[match(spe$sample_id, meta$sample_id)]
+spe$ROI &lt;- factor(spe$ROI, levels = mixedsort(unique(spe$ROI)))
+
+spe$condition &lt;- meta$condition[match(spe$sample_id, meta$sample_id)]
+spe$annotation &lt;- meta$annotation[match(spe$sample_id, meta$sample_id)]
+
+spe@metadata$meta_final &lt;- meta</code></pre>
+</div>
+<div id="check-2---metadata" class="section level3">
+<h3>Check 2 - metadata</h3>
+<pre class="r"><code>unique(spe$patient_id)</code></pre>
+<pre class="scroll-100"><code>[1] 9 7 8 5 4 3 2 1 6
+Levels: 1 2 3 4 5 6 7 8 9</code></pre>
+<pre class="r"><code>unique(spe$ROI)</code></pre>
+<pre class="scroll-100"><code> [1] 51  41  42  52  53  54  46  47  48  49  50  26  27  28  29  30  21  22  23 
+[20] 24  25  16  17  18  19  20  11  12  13  14  15  6   7   8   9_2 9_1 10  1  
+[39] 2   3   4   5   44  45  36  37  38  39  40  31  32  33  34  43  35 
+55 Levels: 1 2 3 4 5 6 7 8 9_1 9_2 10 11 12 13 14 15 16 17 18 19 20 21 ... 54</code></pre>
+<pre class="r"><code>unique(spe$condition)</code></pre>
+<pre class="scroll-100"><code>[1] &quot;KO&quot; &quot;WT&quot;</code></pre>
+<pre class="r"><code>unique(spe$annotation)</code></pre>
+<pre class="scroll-100"><code>[1] &quot;M&quot; &quot;S&quot; &quot;L&quot;</code></pre>
+</div>
+<div id="dimensionality-reduction-annotated-cells"
+class="section level3">
+<h3>Dimensionality reduction: annotated cells</h3>
+<pre class="r"><code>dittoDimPlot(spe, 
+             var = &quot;celltype&quot;,
+             reduction.use = &quot;UMAP&quot;, 
+             size = 0.2,
+             do.label = TRUE) +
+    ggtitle(&quot;IMCA annotated cell types overlaid on UMAP&quot;)</code></pre>
+<p><img src="figure/3_dim_red.Rmd/celltype%20overlay%20UMAP-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>#Celltype UMAP split by condition</p>
+<pre class="r"><code>#Sample 10% of the dataset
+spe_small &lt;- spe[, sample(ncol(spe), round(ncol(spe)/10))]
+
+p1 &lt;- dittoDimPlot(spe_small, 
+             var = &quot;celltype&quot;,
+             split.by = &quot;condition&quot;,
+             reduction.use = &quot;UMAP&quot;, 
+             size = 0.6,
+             do.label = FALSE)
+
+p2 &lt;-dittoBarPlot(spe, var = &quot;celltype&quot;, group.by = &quot;condition&quot;)
+p3 &lt;-dittoBarPlot(spe, var = &quot;condition&quot;, group.by = &quot;celltype&quot;)
+
+plot_grid(p1, p2, p3,
+          ncol = 1)</code></pre>
+<p><img src="figure/3_dim_red.Rmd/celltype%20by%20condition-1.png" width="960" style="display: block; margin: auto;" /></p>
+<p>#Celltype UMAP split by annotation</p>
+<pre class="r"><code>p1 &lt;-dittoDimPlot(spe_small, 
+             var = &quot;celltype&quot;,
+             split.by = &quot;annotation&quot;,
+             reduction.use = &quot;UMAP&quot;, 
+             size = 0.6,
+             do.label = FALSE)
+
+p2 &lt;-dittoBarPlot(spe, var = &quot;celltype&quot;, group.by = &quot;annotation&quot;)
+p3 &lt;-dittoBarPlot(spe, var = &quot;annotation&quot;, group.by = &quot;celltype&quot;)
+
+plot_grid(p1, p2, p3,
+          ncol = 1)</code></pre>
+<p><img src="figure/3_dim_red.Rmd/celltype%20by%20annotation-1.png" width="960" style="display: block; margin: auto;" /></p>
+<p>#Celltype UMAP split by patient ID</p>
+<pre class="r"><code>p1 &lt;-dittoDimPlot(spe_small, 
+             var = &quot;celltype&quot;,
+             split.by = &quot;donor_id&quot;,
+             reduction.use = &quot;UMAP&quot;, 
+             size = 0.6,
+             do.label = FALSE)
+
+p2 &lt;-dittoBarPlot(spe, var = &quot;celltype&quot;, group.by = &quot;donor_id&quot;)
+p3 &lt;-dittoBarPlot(spe, var = &quot;donor_id&quot;, group.by = &quot;celltype&quot;)
+
+plot_grid(p1, p2, p3,
+          ncol = 1)</code></pre>
+<p><img src="figure/3_dim_red.Rmd/celltype%20by%20patientID-1.png" width="960" style="display: block; margin: auto;" /></p>
+<p>#Celltype UMAP split by ROI</p>
+<pre class="r"><code>p1 &lt;-dittoDimPlot(spe_small, 
+             var = &quot;celltype&quot;,
+             split.by = &quot;ROI&quot;,
+             reduction.use = &quot;UMAP&quot;, 
+             size = 0.6,
+             do.label = FALSE)
+
+p2 &lt;-dittoBarPlot(spe, var = &quot;celltype&quot;, 
+             group.by = &quot;ROI&quot;, 
+             x.reorder = mixedorder(metaLevels(&quot;ROI&quot;, spe)))
+p3 &lt;-dittoBarPlot(spe, var = &quot;ROI&quot;, group.by = &quot;celltype&quot;)
+
+plot_grid(p1, p2, p3,
+          ncol = 1)</code></pre>
+<p><img src="figure/3_dim_red.Rmd/celltype%20by%20ROI-1.png" width="960" style="display: block; margin: auto;" /></p>
+</div>
+</div>
+<div id="target-expression-umaps" class="section level1">
+<h1>Target expression UMAPs</h1>
+<pre class="r"><code># Define markers
+markers &lt;- c(&quot;E-cadherin&quot;, &quot;Arginase-1&quot;, &quot;CD19&quot;, &quot;CD3e&quot;, &quot;Pan-actin&quot;, &quot;CD206&quot;, &quot;HNFa&quot;, &quot;a-SMA&quot;, &quot;CD8a&quot;, &quot;CD4&quot;, &quot;CD11b&quot;, &quot;Ly6-G&quot;, &quot;CD31&quot;, &quot;F4_80&quot;, &quot;Ki-67&quot;, &quot;CD44&quot;, &quot;CD74&quot;)
+
+#Multiple marker plots
+plot_list &lt;- multi_dittoDimPlot(spe_small, 
+                                var = markers, 
+                                assay = &quot;exprs&quot;, 
+                                reduction.use = &quot;UMAP&quot;,
+                                list.out = TRUE,
+                                size = 0.2)
+
+plot_list &lt;- lapply(plot_list, function(x) x + scale_color_viridis())</code></pre>
+<pre><code>Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.
+Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.</code></pre>
+<pre class="r"><code>plot_grid(plotlist = plot_list)</code></pre>
+<p><img src="figure/3_dim_red.Rmd/UMAP%20target%20exprs-1.png" width="1152" style="display: block; margin: auto;" /></p>
+</div>
+<div id="single-target-plots" class="section level1">
+<h1>Single target plots</h1>
+</div>
+<div id="get-rid-of-useless-channels" class="section level1">
+<h1>Get rid of useless channels</h1>
+<pre class="r"><code>#Exclude unwanted channels 
+
+rowData(spe)$use_channel &lt;- grepl(&quot;a-SMA|CD19|HNFa|CD11b|F4_80|CD44|CD3e|E-cadherin|Ly6-G|CD206|Arginase-1|CD4|CD74|CD8a|Ki-67|CD31|Pan-actin|HistoneH3|DNA1|DNA2&quot;, rownames(spe))</code></pre>
+<div id="define-colors" class="section level3">
+<h3>Define colors</h3>
+<pre class="r"><code>color_vectors &lt;- list()
+
+#For the ROI
+ROI &lt;- setNames(dittoColors(reps = 1)[seq_along(unique(spe$sample_id))], 
+                unique(spe$ROI))
+#For the patient ID
+patient_id &lt;- setNames(brewer.pal(length(unique(spe$patient_id)), name = &quot;Set1&quot;), 
+                unique(spe$patient_id))
+#For the sample ID
+sample_id &lt;- setNames(dittoColors(reps = 1)[seq_along(unique(spe$sample_id))], 
+                unique(spe$sample_id))
+#For the condition
+condition &lt;- setNames(brewer.pal(length(unique(spe$condition)), name = &quot;Set2&quot;), 
+                unique(spe$condition))</code></pre>
+<pre><code>Warning in brewer.pal(length(unique(spe$condition)), name = &quot;Set2&quot;): minimal value for n is 3, returning requested palette with 3 different levels</code></pre>
+<pre class="r"><code>#For the annotation
+annotation &lt;- setNames(brewer.pal(length(unique(spe$annotation)), name = &quot;Set3&quot;), 
+                unique(spe$annotation))
+#For cell type
+annotation &lt;- setNames(brewer.pal(length(unique(spe$annotation)), name = &quot;Set3&quot;), 
+                unique(spe$annotation))
+
+color_vectors$ROI &lt;- ROI
+color_vectors$patient_id &lt;- patient_id
+color_vectors$sample_id &lt;- sample_id
+color_vectors$condition &lt;- condition
+color_vectors$annotation &lt;- annotation
+
+metadata(spe)$color_vectors &lt;- color_vectors</code></pre>
+</div>
+</div>
+<div id="heatmap-visualization" class="section level1">
+<h1>Heatmap visualization</h1>
+<pre class="r"><code># Sample cells
+cur_cells &lt;- sample(seq_len(ncol(spe)), 40000)
+
+dittoHeatmap(spe[, cur_cells], 
+             genes = rowData(spe)$use_channel,
+             assay = &quot;exprs&quot;, scale = &quot;none&quot;,
+             heatmap.colors = viridis(100), 
+             annot.by = c(&quot;celltype&quot;, &quot;condition&quot;, &quot;annotation&quot;, &quot;patient_id&quot;),
+             annot.colors = c(dittoColors(1)[1:length(unique(spe$celltype))], metadata(spe)$color_vectors$condition, metadata(spe)$color_vectors$annotation, metadata(spe)$color_vectors$patient_id))</code></pre>
+<p><img src="figure/3_dim_red.Rmd/IMCA%20cell%20types%20heatmap%20singlecell-1.png" width="960" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># Define type markers
+type_markers &lt;- c(&quot;E-cadherin&quot;, &quot;Arginase-1&quot;, &quot;CD19&quot;, &quot;CD3e&quot;, &quot;Pan-actin&quot;, &quot;CD206&quot;, &quot;HNFa&quot;, &quot;a-SMA&quot;, &quot;CD8a&quot;, &quot;CD4&quot;, &quot;CD11b&quot;, &quot;Ly6-G&quot;, &quot;CD31&quot;, &quot;F4_80&quot;, &quot;Ki-67&quot;, &quot;CD44&quot;, &quot;CD74&quot;)
+
+state_markers &lt;- c(&quot;HistoneH3&quot;, &quot;DNA1&quot;)
+
+
+# Add to spe
+rowData(spe)$marker_class &lt;- ifelse(rownames(spe) %in% type_markers, &quot;type&quot;,
+                                    ifelse(rownames(spe) %in% state_markers, &quot;state&quot;, 
+                                    &quot;other&quot;))
+
+## by cell type
+celltype_mean &lt;- aggregateAcrossCells(as(spe, &quot;SingleCellExperiment&quot;),  
+                     ids = spe$celltype, 
+                     statistics = &quot;mean&quot;,
+                     use.assay.type = &quot;exprs&quot;, 
+                     subset.row = rownames(spe)[rowData(spe)$marker_class == &quot;type&quot;]
+                     )
+
+# No scaling
+dittoHeatmap(celltype_mean,
+             assay = &quot;exprs&quot;, cluster_cols = TRUE, 
+             scale = &quot;none&quot;,
+             heatmap.colors = viridis(100),
+             annot.by = c(&quot;celltype&quot;,&quot;ncells&quot;))</code></pre>
+<p><img src="figure/3_dim_red.Rmd/heatmap_cellsaggregated-1.png" width="960" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>             annotation_colors = list(celltype = metadata(spe)$color_vectors$celltype,
+                                      ncells = plasma(100))</code></pre>
+<pre class="r"><code># Min-max expression scaling
+dittoHeatmap(celltype_mean,
+             assay = &quot;exprs&quot;, cluster_cols = TRUE, 
+             scaled.to.max = TRUE,
+             heatmap.colors.max.scaled = inferno(100),
+             annot.by = c(&quot;celltype&quot;,&quot;ncells&quot;))</code></pre>
+<p><img src="figure/3_dim_red.Rmd/heatmap_cellsaggreg_minmax-1.png" width="960" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>             annotation_colors = list(celltype = metadata(spe)$color_vectors$celltype,
+                                     ncells = plasma(100))</code></pre>
+<div id="violin-plot-visualization" class="section level3">
+<h3>Violin plot visualization</h3>
+<pre class="r"><code>#Violin Plot - plotExpression
+plotExpression(spe[,cur_cells], 
+               features = rownames(spe)[rowData(spe)$marker_class == &quot;type&quot;],
+               x = &quot;celltype&quot;, exprs_values = &quot;exprs&quot;, 
+               colour_by = &quot;celltype&quot;) +
+    theme(axis.text.x =  element_text(angle = 90))</code></pre>
+<p><img src="figure/3_dim_red.Rmd/violinplot_expression-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    scale_color_manual(values = metadata(spe)$color_vectors$celltype)</code></pre>
+<pre><code>&lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;
+    aesthetics: colour
+    axis_order: function
+    break_info: function
+    break_positions: function
+    breaks: waiver
+    call: call
+    clone: function
+    dimension: function
+    drop: TRUE
+    expand: waiver
+    get_breaks: function
+    get_breaks_minor: function
+    get_labels: function
+    get_limits: function
+    guide: legend
+    is_discrete: function
+    is_empty: function
+    labels: waiver
+    limits: NULL
+    make_sec_title: function
+    make_title: function
+    map: function
+    map_df: function
+    n.breaks.cache: NULL
+    na.translate: TRUE
+    na.value: grey50
+    name: waiver
+    palette: function
+    palette.cache: NULL
+    position: left
+    range: environment
+    rescale: function
+    reset: function
+    scale_name: manual
+    train: function
+    train_df: function
+    transform: function
+    transform_df: function
+    super:  &lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;</code></pre>
+</div>
+<div id="scatter-plot-visualization" class="section level3">
+<h3>Scatter plot visualization</h3>
+<pre class="r"><code>#Scatter plot
+dittoScatterPlot(spe, 
+                 x.var = &quot;CD3e&quot;, y.var=&quot;CD19&quot;, 
+                 assay.x = &quot;exprs&quot;, assay.y = &quot;exprs&quot;, 
+                 color.var = &quot;celltype&quot;) +
+    #scale_color_manual(values = metadata(spe)$color_vectors$celltype) +
+    ggtitle(&quot;Scatterplot for CD3/CD20 labelled by celltype&quot;)</code></pre>
+<p><img src="figure/3_dim_red.Rmd/scatterplot-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="barplot-visualization" class="section level3">
+<h3>Barplot visualization</h3>
+<pre class="r"><code># by sample_id
+dittoBarPlot(spe, var = &quot;celltype&quot;, group.by = &quot;ROI&quot;) </code></pre>
+<p><img src="figure/3_dim_red.Rmd/barplot_sampleID-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    scale_fill_manual(values = metadata(spe)$color_vectors$celltype)</code></pre>
+<pre><code>&lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;
+    aesthetics: fill
+    axis_order: function
+    break_info: function
+    break_positions: function
+    breaks: waiver
+    call: call
+    clone: function
+    dimension: function
+    drop: TRUE
+    expand: waiver
+    get_breaks: function
+    get_breaks_minor: function
+    get_labels: function
+    get_limits: function
+    guide: legend
+    is_discrete: function
+    is_empty: function
+    labels: waiver
+    limits: NULL
+    make_sec_title: function
+    make_title: function
+    map: function
+    map_df: function
+    n.breaks.cache: NULL
+    na.translate: TRUE
+    na.value: grey50
+    name: waiver
+    palette: function
+    palette.cache: NULL
+    position: left
+    range: environment
+    rescale: function
+    reset: function
+    scale_name: manual
+    train: function
+    train_df: function
+    transform: function
+    transform_df: function
+    super:  &lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;</code></pre>
+<pre class="r"><code># by patient_id - percentage
+dittoBarPlot(spe, var = &quot;celltype&quot;, group.by = &quot;patient_id&quot;) </code></pre>
+<p><img src="figure/3_dim_red.Rmd/barplot_patientID_percentage-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    scale_fill_manual(values = metadata(spe)$color_vectors$celltype)</code></pre>
+<pre><code>&lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;
+    aesthetics: fill
+    axis_order: function
+    break_info: function
+    break_positions: function
+    breaks: waiver
+    call: call
+    clone: function
+    dimension: function
+    drop: TRUE
+    expand: waiver
+    get_breaks: function
+    get_breaks_minor: function
+    get_labels: function
+    get_limits: function
+    guide: legend
+    is_discrete: function
+    is_empty: function
+    labels: waiver
+    limits: NULL
+    make_sec_title: function
+    make_title: function
+    map: function
+    map_df: function
+    n.breaks.cache: NULL
+    na.translate: TRUE
+    na.value: grey50
+    name: waiver
+    palette: function
+    palette.cache: NULL
+    position: left
+    range: environment
+    rescale: function
+    reset: function
+    scale_name: manual
+    train: function
+    train_df: function
+    transform: function
+    transform_df: function
+    super:  &lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;</code></pre>
+<pre class="r"><code># by patient_id - count
+dittoBarPlot(spe, scale = &quot;count&quot;, var = &quot;celltype&quot;, group.by = &quot;patient_id&quot;) </code></pre>
+<p><img src="figure/3_dim_red.Rmd/barplot_patientID_count-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    scale_fill_manual(values = metadata(spe)$color_vectors$celltype)</code></pre>
+<pre><code>&lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;
+    aesthetics: fill
+    axis_order: function
+    break_info: function
+    break_positions: function
+    breaks: waiver
+    call: call
+    clone: function
+    dimension: function
+    drop: TRUE
+    expand: waiver
+    get_breaks: function
+    get_breaks_minor: function
+    get_labels: function
+    get_limits: function
+    guide: legend
+    is_discrete: function
+    is_empty: function
+    labels: waiver
+    limits: NULL
+    make_sec_title: function
+    make_title: function
+    map: function
+    map_df: function
+    n.breaks.cache: NULL
+    na.translate: TRUE
+    na.value: grey50
+    name: waiver
+    palette: function
+    palette.cache: NULL
+    position: left
+    range: environment
+    rescale: function
+    reset: function
+    scale_name: manual
+    train: function
+    train_df: function
+    transform: function
+    transform_df: function
+    super:  &lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;</code></pre>
+</div>
+<div id="catalyst-pseudobulk-level-mds-plots" class="section level3">
+<h3>CATALYST Pseudobulk-level MDS plots</h3>
+<pre class="r"><code># save spe in CATALYST-compatible object with renamed colData entries and 
+# new metadata information
+spe_cat &lt;- spe 
+
+spe_cat$sample_id &lt;- factor(spe$sample_id)
+spe_cat$condition &lt;- factor(spe$condition)
+spe_cat$cluster_id &lt;- factor(spe$celltype)
+spe_cat$annotation &lt;- factor(spe$annotation)
+
+#add celltype information to metadata
+metadata(spe_cat)$cluster_codes &lt;- data.frame(celltype = factor(spe_cat$celltype))</code></pre>
+<pre class="r"><code># MDS pseudobulk by cell type
+pbMDS(spe_cat, by = &quot;cluster_id&quot;, 
+      features = rownames(spe_cat)[rowData(spe_cat)$marker_class == &quot;type&quot;], 
+      label_by = &quot;cluster_id&quot;, k = &quot;celltype&quot;) </code></pre>
+<p><img src="figure/3_dim_red.Rmd/MDS_plot_celltype-1.png" width="960" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  scale_color_manual(values = metadata(spe_cat)$color_vectors$celltype)</code></pre>
+<pre><code>&lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;
+    aesthetics: colour
+    axis_order: function
+    break_info: function
+    break_positions: function
+    breaks: waiver
+    call: call
+    clone: function
+    dimension: function
+    drop: TRUE
+    expand: waiver
+    get_breaks: function
+    get_breaks_minor: function
+    get_labels: function
+    get_limits: function
+    guide: legend
+    is_discrete: function
+    is_empty: function
+    labels: waiver
+    limits: NULL
+    make_sec_title: function
+    make_title: function
+    map: function
+    map_df: function
+    n.breaks.cache: NULL
+    na.translate: TRUE
+    na.value: grey50
+    name: waiver
+    palette: function
+    palette.cache: NULL
+    position: left
+    range: environment
+    rescale: function
+    reset: function
+    scale_name: manual
+    train: function
+    train_df: function
+    transform: function
+    transform_df: function
+    super:  &lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;</code></pre>
+<pre class="r"><code># MDS pseudobulk by cell type and sample_id
+pbMDS(spe_cat, by = &quot;both&quot;, 
+      features = rownames(spe_cat)[rowData(spe_cat)$marker_class == &quot;type&quot;], 
+      k = &quot;celltype&quot;, shape_by = &quot;condition&quot;, 
+      size_by = TRUE) </code></pre>
+<p><img src="figure/3_dim_red.Rmd/MDS_plot_celltype_condition-1.png" width="960" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  scale_color_manual(values = metadata(spe_cat)$color_vectors$celltype)</code></pre>
+<pre><code>&lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;
+    aesthetics: colour
+    axis_order: function
+    break_info: function
+    break_positions: function
+    breaks: waiver
+    call: call
+    clone: function
+    dimension: function
+    drop: TRUE
+    expand: waiver
+    get_breaks: function
+    get_breaks_minor: function
+    get_labels: function
+    get_limits: function
+    guide: legend
+    is_discrete: function
+    is_empty: function
+    labels: waiver
+    limits: NULL
+    make_sec_title: function
+    make_title: function
+    map: function
+    map_df: function
+    n.breaks.cache: NULL
+    na.translate: TRUE
+    na.value: grey50
+    name: waiver
+    palette: function
+    palette.cache: NULL
+    position: left
+    range: environment
+    rescale: function
+    reset: function
+    scale_name: manual
+    train: function
+    train_df: function
+    transform: function
+    transform_df: function
+    super:  &lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;</code></pre>
+<pre class="r"><code># MDS pseudobulk by ann
+
+pbMDS(spe_cat, by = &quot;sample_id&quot;, 
+      color_by = &quot;annotation&quot;, 
+      features = rownames(spe_cat)[rowData(spe_cat)$marker_class == &quot;type&quot;]) </code></pre>
+<pre><code>Warning: ggrepel: 12 unlabeled data points (too many overlaps). Consider
+increasing max.overlaps</code></pre>
+<p><img src="figure/3_dim_red.Rmd/MDS_plot_ann-1.png" width="1152" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  scale_color_manual(values = metadata(spe_cat)$color_vectors$ROI)</code></pre>
+<pre><code>&lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;
+    aesthetics: colour
+    axis_order: function
+    break_info: function
+    break_positions: function
+    breaks: waiver
+    call: call
+    clone: function
+    dimension: function
+    drop: TRUE
+    expand: waiver
+    get_breaks: function
+    get_breaks_minor: function
+    get_labels: function
+    get_limits: function
+    guide: legend
+    is_discrete: function
+    is_empty: function
+    labels: waiver
+    limits: function
+    make_sec_title: function
+    make_title: function
+    map: function
+    map_df: function
+    n.breaks.cache: NULL
+    na.translate: TRUE
+    na.value: grey50
+    name: waiver
+    palette: function
+    palette.cache: NULL
+    position: left
+    range: environment
+    rescale: function
+    reset: function
+    scale_name: manual
+    train: function
+    train_df: function
+    transform: function
+    transform_df: function
+    super:  &lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;</code></pre>
+</div>
+<div id="pseudobulk-expression-boxplot" class="section level3">
+<h3>Pseudobulk expression boxplot</h3>
+<pre class="r"><code>plotPbExprs(spe_cat, k = &quot;celltype&quot;, 
+            facet_by = &quot;cluster_id&quot;, ncol = 4, 
+            features = rownames(spe_cat)[rowData(spe_cat)$marker_class == &quot;type&quot;]) </code></pre>
+<p><img src="figure/3_dim_red.Rmd/boxplots-1.png" width="1152" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    scale_color_manual(values = metadata(spe_cat)$color_vectors$indication)</code></pre>
+<pre><code>&lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;
+    aesthetics: colour
+    axis_order: function
+    break_info: function
+    break_positions: function
+    breaks: waiver
+    call: call
+    clone: function
+    dimension: function
+    drop: TRUE
+    expand: waiver
+    get_breaks: function
+    get_breaks_minor: function
+    get_labels: function
+    get_limits: function
+    guide: legend
+    is_discrete: function
+    is_empty: function
+    labels: waiver
+    limits: NULL
+    make_sec_title: function
+    make_title: function
+    map: function
+    map_df: function
+    n.breaks.cache: NULL
+    na.translate: TRUE
+    na.value: grey50
+    name: waiver
+    palette: function
+    palette.cache: NULL
+    position: left
+    range: environment
+    rescale: function
+    reset: function
+    scale_name: manual
+    train: function
+    train_df: function
+    transform: function
+    transform_df: function
+    super:  &lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;</code></pre>
+</div>
+<div id="save-data" class="section level3">
+<h3>Save data</h3>
+<pre class="r"><code>saveRDS(spe, file.path(&quot;output&quot;, &quot;spe3.rds&quot;))</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.2.2 (2022-10-31 ucrt)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 10 x64 (build 19044)
+
+Matrix products: default
+
+locale:
+[1] LC_COLLATE=English_Switzerland.utf8  LC_CTYPE=English_Switzerland.utf8   
+[3] LC_MONETARY=English_Switzerland.utf8 LC_NUMERIC=C                        
+[5] LC_TIME=English_Switzerland.utf8    
+
+attached base packages:
+[1] grid      stats4    stats     graphics  grDevices utils     datasets 
+[8] methods   base     
+
+other attached packages:
+ [1] RColorBrewer_1.1-3          gtools_3.9.4               
+ [3] lubridate_1.9.2             forcats_1.0.0              
+ [5] dplyr_1.1.2                 purrr_1.0.1                
+ [7] readr_2.1.4                 tidyr_1.3.0                
+ [9] tibble_3.2.1                tidyverse_2.0.0            
+[11] circlize_0.4.15             ComplexHeatmap_2.12.1      
+[13] cowplot_1.1.1               scater_1.24.0              
+[15] imcRtools_1.7.0             stringr_1.5.0              
+[17] openxlsx_4.2.5.2            ggridges_0.5.4             
+[19] caret_6.0-94                lattice_0.20-45            
+[21] Rphenoannoy_0.1.0           Matrix_1.5-3               
+[23] cytomapper_1.10.1           EBImage_4.40.1             
+[25] gridExtra_2.3               pheatmap_1.0.12            
+[27] patchwork_1.1.2             ConsensusClusterPlus_1.60.0
+[29] kohonen_3.0.11              CATALYST_1.20.1            
+[31] scran_1.24.1                scuttle_1.8.4              
+[33] BiocParallel_1.32.6         bluster_1.6.0              
+[35] viridis_0.6.3               viridisLite_0.4.2          
+[37] dittoSeq_1.8.1              Rphenograph_0.99.1         
+[39] igraph_1.4.2                ggplot2_3.4.2              
+[41] SpatialExperiment_1.8.1     SingleCellExperiment_1.20.1
+[43] SummarizedExperiment_1.28.0 Biobase_2.56.0             
+[45] GenomicRanges_1.48.0        GenomeInfoDb_1.34.9        
+[47] IRanges_2.30.0              S4Vectors_0.34.0           
+[49] BiocGenerics_0.44.0         MatrixGenerics_1.10.0      
+[51] matrixStats_0.62.0          workflowr_1.7.0            
+
+loaded via a namespace (and not attached):
+  [1] rsvd_1.0.5                svglite_2.1.1            
+  [3] class_7.3-21              fftwtools_0.9-11         
+  [5] ps_1.7.5                  foreach_1.5.2            
+  [7] rprojroot_2.0.3           crayon_1.5.2             
+  [9] MASS_7.3-58.1             rhdf5filters_1.10.1      
+ [11] nlme_3.1-162              backports_1.4.1          
+ [13] rlang_1.1.1               XVector_0.36.0           
+ [15] irlba_2.3.5.1             callr_3.7.3              
+ [17] limma_3.54.2              rjson_0.2.21             
+ [19] bit64_4.0.5               glue_1.6.2               
+ [21] parallel_4.2.2            processx_3.8.1           
+ [23] vipor_0.4.5               classInt_0.4-9           
+ [25] shinydashboard_0.7.2      tidyselect_1.2.0         
+ [27] distances_0.1.9           XML_3.99-0.14            
+ [29] zoo_1.8-12                sf_1.0-12                
+ [31] ggpubr_0.6.0              nnls_1.4                 
+ [33] xtable_1.8-4              magrittr_2.0.3           
+ [35] evaluate_0.21             cli_3.6.0                
+ [37] zlibbioc_1.42.0           rstudioapi_0.14          
+ [39] sp_1.6-0                  whisker_0.4.1            
+ [41] bslib_0.4.2               rpart_4.1.19             
+ [43] shiny_1.7.4               BiocSingular_1.12.0      
+ [45] xfun_0.39                 clue_0.3-64              
+ [47] cluster_2.1.4             tidygraph_1.2.3          
+ [49] ggrepel_0.9.3             listenv_0.9.0            
+ [51] png_0.1-8                 future_1.32.0            
+ [53] ipred_0.9-14              withr_2.5.0              
+ [55] bitops_1.0-7              aws.signature_0.6.0      
+ [57] ggforce_0.4.1             RBGL_1.72.0              
+ [59] plyr_1.8.8                ncdfFlow_2.42.1          
+ [61] RTriangle_1.6-0.12        hardhat_1.3.0            
+ [63] e1071_1.7-13              dqrng_0.3.0              
+ [65] pROC_1.18.2               pillar_1.9.0             
+ [67] RcppParallel_5.1.7        GlobalOptions_0.1.2      
+ [69] cachem_1.0.8              multcomp_1.4-23          
+ [71] fs_1.6.2                  CytoML_2.8.1             
+ [73] raster_3.6-20             GetoptLong_1.0.5         
+ [75] DelayedMatrixStats_1.20.0 vctrs_0.6.2              
+ [77] ellipsis_0.3.2            generics_0.1.3           
+ [79] lava_1.7.2.1              tools_4.2.2              
+ [81] beeswarm_0.4.0            munsell_0.5.0            
+ [83] tweenr_2.0.2              proxy_0.4-27             
+ [85] aws.s3_0.3.21             DelayedArray_0.22.0      
+ [87] fastmap_1.1.1             compiler_4.2.2           
+ [89] abind_1.4-5               httpuv_1.6.11            
+ [91] GenomeInfoDbData_1.2.9    prodlim_2023.03.31       
+ [93] edgeR_3.40.2              ggnewscale_0.4.8         
+ [95] ggpointdensity_0.1.0      deldir_1.0-6             
+ [97] utf8_1.2.3                later_1.3.1              
+ [99] recipes_1.0.6             jsonlite_1.8.4           
+[101] concaveman_1.1.0          scales_1.2.1             
+[103] graph_1.74.0              ScaledMatrix_1.4.1       
+[105] carData_3.0-5             sparseMatrixStats_1.10.0 
+[107] promises_1.2.0.1          car_3.1-2                
+[109] doParallel_1.0.17         latticeExtra_0.6-30      
+[111] R.utils_2.12.2            rmarkdown_2.21           
+[113] sandwich_3.0-2            statmod_1.5.0            
+[115] Rtsne_0.16                HDF5Array_1.26.0         
+[117] survival_3.5-3            yaml_2.3.7               
+[119] plotrix_3.8-2             systemfonts_1.0.4        
+[121] cytolib_2.8.0             flowWorkspace_4.8.0      
+[123] htmltools_0.5.4           locfit_1.5-9.7           
+[125] graphlayouts_1.0.0        digest_0.6.31            
+[127] mime_0.12                 tiff_0.1-11              
+[129] units_0.8-2               future.apply_1.10.0      
+[131] data.table_1.14.8         R.oo_1.25.0              
+[133] flowCore_2.8.0            drc_3.0-1                
+[135] labeling_0.4.2            splines_4.2.2            
+[137] Rhdf5lib_1.20.0           RCurl_1.98-1.7           
+[139] hms_1.1.3                 broom_1.0.4              
+[141] rhdf5_2.42.1              colorspace_2.1-0         
+[143] DropletUtils_1.18.1       base64enc_0.1-3          
+[145] ggbeeswarm_0.7.2          shape_1.4.6              
+[147] nnet_7.3-18               sass_0.4.6               
+[149] Rcpp_1.0.10               RANN_2.6.1               
+[151] mvtnorm_1.1-3             FlowSOM_2.4.0            
+[153] RProtoBufLib_2.8.0        fansi_1.0.4              
+[155] tzdb_0.4.0                parallelly_1.35.0        
+[157] ModelMetrics_1.2.2.2      R6_2.5.1                 
+[159] lifecycle_1.0.3           zip_2.3.0                
+[161] curl_5.0.0                ggsignif_0.6.4           
+[163] jquerylib_0.1.4           TH.data_1.1-2            
+[165] iterators_1.0.14          gower_1.0.1              
+[167] svgPanZoom_0.3.4          htmlwidgets_1.6.2        
+[169] beachmat_2.14.2           polyclip_1.10-4          
+[171] timechange_0.2.0          terra_1.7-29             
+[173] globals_0.16.2            codetools_0.2-19         
+[175] metapod_1.4.0             getPass_0.2-2            
+[177] R.methodsS3_1.8.2         gtable_0.3.3             
+[179] DBI_1.1.3                 git2r_0.32.0             
+[181] KernSmooth_2.23-20        httr_1.4.6               
+[183] highr_0.10                vroom_1.6.3              
+[185] stringi_1.7.12            reshape2_1.4.4           
+[187] farver_2.1.1              hexbin_1.28.3            
+[189] Rgraphviz_2.40.0          magick_2.7.4             
+[191] timeDate_4022.108         DT_0.27                  
+[193] xml2_1.3.4                colorRamps_2.3.1         
+[195] ggcyto_1.24.1             BiocNeighbors_1.16.0     
+[197] interp_1.1-4              scattermore_1.0          
+[199] bit_4.0.5                 jpeg_0.1-10              
+[201] ggraph_2.1.0              pkgconfig_2.0.3          
+[203] rstatix_0.7.2             knitr_1.42               </code></pre>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
