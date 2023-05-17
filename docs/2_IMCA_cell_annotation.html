@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Tess and Tural" />
+
+
+<title>IMC data analysis workflow</title>
+
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.4.0/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.0/css/v4-shims.min.css" rel="stylesheet" />
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">230515_workflowr_haibin</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Contents</a>
+</li>
+<li>
+  <a href="0_prep_data.html">Data prep</a>
+</li>
+<li>
+  <a href="1_QC_mask.html">QC mask</a>
+</li>
+<li>
+  <a href="2_IMCA_cell_annotation.html">Cell ann</a>
+</li>
+<li>
+  <a href="3_dim_red.html">Dim red</a>
+</li>
+<li>
+  <a href="4_img_vis.html">Img vis</a>
+</li>
+<li>
+  <a href="5_spatial_vis.html">Spatial</a>
+</li>
+<li>
+  <a href="6_statistics.html">Stats</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/tessbrodie/230515_workflowr_haibin">
+    <span class="fab fa-github"></span>
+     
+    Source code
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">IMC data analysis workflow</h1>
+<h4 class="author">Tess and Tural</h4>
+<h4 class="date">University of Bern, DBMR, Visceral and Transplantation
+Surgery lab</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> </a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2023-05-17
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 1
+</p>
+<p>
+<strong>Knit directory:</strong> <code>230515_workflowr_haibin/</code>
+<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.0). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20230515code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20230515)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20230515code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20230515)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongabsolute">
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> <strong>File paths:</strong> absolute </a>
+</p>
+</div>
+<div id="strongFilepathsstrongabsolute" class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Using absolute paths to the files within your workflowr project makes it
+difficult for you and others to run your code on a different machine.
+Change the absolute path(s) below to the suggested relative path(s) to
+make your code more reproducible.
+</p>
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th style="text-align:left;">
+absolute
+</th>
+<th style="text-align:left;">
+relative
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+C:/Users/IMC Platform
+laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haibin
+</td>
+<td style="text-align:left;">
+.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongd1520a0">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong> d1520a0
+</a>
+</p>
+</div>
+<div id="strongRepositoryversionstrongd1520a0"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version d1520a0.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+    Ignored:    analysis/0_prep_data_cache/
+    Ignored:    analysis/1_QC_mask_cache/
+    Ignored:    analysis/3_dim_red_cache/
+    Ignored:    analysis/4_img_vis_cache/
+    Ignored:    analysis/6_statistics_cache/
+
+Untracked files:
+    Untracked:  3_communities_v2.png
+    Untracked:  6_communities_v3.png
+    Untracked:  analysis/3_dim_red.Rmd
+    Untracked:  analysis/4_img_vis.Rmd
+    Untracked:  analysis/5_spatial_vis.Rmd
+    Untracked:  analysis/6_statistics.Rmd
+    Untracked:  analysis/6_statistics_v2.Rmd
+    Untracked:  data/images.csv
+    Untracked:  data/images.rds
+    Untracked:  data/img/
+    Untracked:  data/intensities/
+    Untracked:  data/masks.rds
+    Untracked:  data/masks/
+    Untracked:  data/neighbors/
+    Untracked:  data/panel.csv
+    Untracked:  data/raw/
+    Untracked:  data/regionprops/
+    Untracked:  data/sample_metadata.xlsx
+    Untracked:  data/sample_metadata_shortened.xlsx
+    Untracked:  output/rffit.rds
+    Untracked:  output/spe0.rds
+    Untracked:  output/spe1.rds
+    Untracked:  output/spe3.rds
+    Untracked:  output/spe4.rds
+    Untracked:  output/spe_ca.rds
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown
+(<code>analysis/2_IMCA_cell_annotation.Rmd</code>) and HTML
+(<code>docs/2_IMCA_cell_annotation.html</code>) files. If you’ve
+configured a remote Git repository (see <code>?wflow_git_remote</code>),
+click on the hyperlinks in the table below to view the files as they
+were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+d1520a0
+</td>
+<td>
+Tess Brodie
+</td>
+<td>
+2023-05-17
+</td>
+<td>
+wflow_publish("analysis/2_IMCA_cell_annotation.Rmd", delete_cache =
+TRUE)
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="cell-annotation-imca" class="section level1">
+<h1>Cell annotation IMCA</h1>
+<style type="text/css">
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+</style>
+<div id="load-packages" class="section level3">
+<h3>Load packages</h3>
+<pre class="r"><code>library(SpatialExperiment)</code></pre>
+<pre><code>Warning: multiple methods tables found for &#39;aperm&#39;</code></pre>
+<pre><code>Warning: replacing previous import &#39;BiocGenerics::aperm&#39; by
+&#39;DelayedArray::aperm&#39; when loading &#39;SummarizedExperiment&#39;</code></pre>
+<pre><code>Warning: replacing previous import &#39;BiocGenerics::aperm&#39; by
+&#39;DelayedArray::aperm&#39; when loading &#39;HDF5Array&#39;</code></pre>
+<pre class="r"><code>library(Rphenograph)</code></pre>
+<pre><code>Warning: package &#39;ggplot2&#39; was built under R version 4.2.3</code></pre>
+<pre><code>Warning: package &#39;igraph&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(igraph)
+library(dittoSeq)
+library(viridis)</code></pre>
+<pre><code>Warning: package &#39;viridis&#39; was built under R version 4.2.3</code></pre>
+<pre><code>Warning: package &#39;viridisLite&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(bluster)
+library(BiocParallel)
+library(ggplot2)
+library(scran)
+library(CATALYST)
+library(kohonen)
+library(ConsensusClusterPlus)
+library(patchwork)
+library(pheatmap)
+library(gridExtra)
+library(cytomapper)</code></pre>
+<pre><code>Warning: package &#39;EBImage&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(Rphenoannoy)
+library(SingleCellExperiment)
+library(caret)</code></pre>
+<pre><code>Warning: package &#39;caret&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(ggridges)
+library(patchwork)
+library(pheatmap)
+library(gridExtra)
+library(scuttle)
+library(stringr)
+library(tidyverse)</code></pre>
+<pre><code>Warning: package &#39;tibble&#39; was built under R version 4.2.3</code></pre>
+<pre><code>Warning: package &#39;dplyr&#39; was built under R version 4.2.3</code></pre>
+</div>
+<div id="load-data" class="section level3">
+<h3>Load data</h3>
+<pre class="r"><code>images &lt;- readRDS(file.path(&quot;data&quot;, &quot;images.rds&quot;))
+masks &lt;- readRDS(file.path(&quot;data&quot;, &quot;masks.rds&quot;))
+
+rffit &lt;- readRDS(file.path(&quot;output&quot;, &quot;rffit.rds&quot;))
+
+spe &lt;- readRDS(file.path(&quot;output&quot;, &quot;spe_ca.rds&quot;))</code></pre>
+<pre class="r"><code>ggplot(rffit$classifier) + 
+  geom_errorbar(data = rffit$classifier$results,
+                aes(ymin = Accuracy - AccuracySD,
+                    ymax = Accuracy + AccuracySD),
+                width = 0.4) +
+    theme_classic(base_size = 15)</code></pre>
+<p><img src="figure/2_IMCA_cell_annotation.Rmd/classifier%20performance-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>plot(varImp(rffit$classifier))</code></pre>
+<p><img src="figure/2_IMCA_cell_annotation.Rmd/classifier%20performance-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>rffit$classifier$finalModel$confusion</code></pre>
+<pre><code>                  AEC_like   AF   B CD4 CD8 Endothelial_CD31 Macrophages_CD206
+AEC_like              1110  112   0   1   0               63                13
+AF                      61 1700  10   3   0               93                22
+B                        5   10 235   3   1                2                 5
+CD4                      4    8   0 255   1                4                 2
+CD8                      6    8   3   6 308                3                 3
+Endothelial_CD31        79  156   0   4   1              675                 2
+Macrophages_CD206        1    1   2   3   0                1               881
+Macrophages_F480         0    0   0   5   0                0                 0
+Monocytes                2    2   0   1   0                1                 9
+Neutrophils              1    1   0   0   0                0                 0
+Peritoneum               0    1   0   0   0                0                 0
+Tumor                   65   30   7   3   1                0                10
+Vessel_aSMA              0    2   0   1   1                0                 3
+                  Macrophages_F480 Monocytes Neutrophils Peritoneum Tumor
+AEC_like                         3         1           0          0    67
+AF                               8         1           0          5    51
+B                                2         2           1          0    13
+CD4                              2         0           0          0    12
+CD8                              2         0           0          0     9
+Endothelial_CD31                 0         0           0          1     2
+Macrophages_CD206                0         0           0          0     1
+Macrophages_F480               693         0           0          0     1
+Monocytes                        4       222           5          0     4
+Neutrophils                      0         5          88          0     3
+Peritoneum                       0         0           0        142    50
+Tumor                            9         1           0         10  7460
+Vessel_aSMA                      0         0           0          0     1
+                  Vessel_aSMA class.error
+AEC_like                    1 0.190371991
+AF                          3 0.131323454
+B                           0 0.157706093
+CD4                         3 0.123711340
+CD8                         4 0.125000000
+Endothelial_CD31            4 0.269480519
+Macrophages_CD206           0 0.010112360
+Macrophages_F480            0 0.008583691
+Monocytes                   1 0.115537849
+Neutrophils                 1 0.111111111
+Peritoneum                  2 0.271794872
+Tumor                       3 0.018291881
+Vessel_aSMA               874 0.009070295</code></pre>
+<pre class="r"><code>ann_mat &lt;- t(assay(spe, &quot;exprs&quot;))</code></pre>
+<pre class="r"><code>cell_class &lt;- as.character(predict.train(rffit$classifier, 
+                                         newdata = ann_mat, 
+                                         type = &quot;raw&quot;))
+
+names(cell_class) &lt;- rownames(ann_mat)
+
+cell_prob &lt;- predict.train(rffit$classifier, 
+                           newdata = ann_mat, 
+                           type = &quot;prob&quot;)
+
+# Label undefined cells
+cell_class[rowMax(as.matrix(cell_prob)) &lt; 0.4] &lt;- &quot;undefined&quot;
+
+# Distribution of maximum probabilities
+tibble(max_prob = rowMax(as.matrix(cell_prob)),
+       type = cell_class) %&gt;%
+    ggplot() +
+        geom_density_ridges(aes(x = max_prob, y = cell_class, fill = cell_class)) +
+#        scale_fill_manual(values = metadata(spe)$color_vectors$celltype) +
+        theme_classic(base_size = 15) +
+        xlab(&quot;Maximum probability&quot;) +
+        ylab(&quot;Cell type&quot;) + 
+        xlim(c(0,1.2))</code></pre>
+<pre><code>Picking joint bandwidth of 0.017</code></pre>
+<p><img src="figure/2_IMCA_cell_annotation.Rmd/annotate%20new%20data-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># Store labels in SpatialExperiment object
+spe$celltype &lt;- cell_class
+
+table(spe$celltype, spe$sample_id)</code></pre>
+<pre><code>                   
+                    221031_day1_Haibin_1_6 221031_day1_Haibin_10_15
+  AEC_like                             164                      386
+  AF                                   599                     1231
+  B                                    285                      115
+  CD4                                  163                       52
+  CD8                                  254                       90
+  Endothelial_CD31                      98                      341
+  Macrophages_CD206                    261                      343
+  Macrophages_F480                     358                      458
+  Monocytes                            127                       96
+  Neutrophils                           13                       36
+  Peritoneum                           114                       38
+  Tumor                               2475                     2979
+  undefined                             92                      104
+  Vessel_aSMA                          269                      163
+                   
+                    221031_day1_Haibin_11_16 221031_day1_Haibin_2_7
+  AEC_like                               179                    148
+  AF                                    1002                    659
+  B                                      139                    226
+  CD4                                    104                    123
+  CD8                                    103                    203
+  Endothelial_CD31                       190                    134
+  Macrophages_CD206                      474                    329
+  Macrophages_F480                       482                    305
+  Monocytes                              115                    114
+  Neutrophils                             17                     20
+  Peritoneum                             301                    156
+  Tumor                                 2525                   3095
+  undefined                               90                     71
+  Vessel_aSMA                            338                    302
+                   
+                    221031_day1_Haibin_3_8 221031_day1_Haibin_4_9
+  AEC_like                             284                    187
+  AF                                   907                    781
+  B                                    303                    133
+  CD4                                  238                    115
+  CD8                                  224                    251
+  Endothelial_CD31                     233                    155
+  Macrophages_CD206                    295                    367
+  Macrophages_F480                     298                    515
+  Monocytes                            116                    119
+  Neutrophils                           18                     27
+  Peritoneum                            92                     24
+  Tumor                               2564                   3558
+  undefined                            123                     94
+  Vessel_aSMA                          283                    154
+                   
+                    221031_day1_Haibin_5_10 221031_day1_Haibin_6_11
+  AEC_like                              263                     577
+  AF                                    632                     902
+  B                                     187                     186
+  CD4                                    99                      34
+  CD8                                   151                      45
+  Endothelial_CD31                      174                     138
+  Macrophages_CD206                     328                      68
+  Macrophages_F480                      541                     122
+  Monocytes                             101                      97
+  Neutrophils                            57                      30
+  Peritoneum                            104                      13
+  Tumor                                4051                     636
+  undefined                              85                      78
+  Vessel_aSMA                           196                      69
+                   
+                    221031_day1_Haibin_7_12 221031_day1_Haibin_8_13
+  AEC_like                              203                     248
+  AF                                    511                     710
+  B                                     119                     202
+  CD4                                    59                     142
+  CD8                                    59                     281
+  Endothelial_CD31                      108                     200
+  Macrophages_CD206                     195                     432
+  Macrophages_F480                      196                     436
+  Monocytes                              43                      88
+  Neutrophils                            17                      49
+  Peritoneum                             92                     101
+  Tumor                                2096                    2950
+  undefined                              59                      95
+  Vessel_aSMA                           201                     287
+                   
+                    221031_day1_Haibin_9_14 221102_day3_Haibin_25_1
+  AEC_like                              416                     159
+  AF                                   1264                    1277
+  B                                     136                      19
+  CD4                                   114                      26
+  CD8                                   138                      47
+  Endothelial_CD31                      258                      75
+  Macrophages_CD206                     229                     448
+  Macrophages_F480                      207                      60
+  Monocytes                             101                      80
+  Neutrophils                            28                      70
+  Peritoneum                            398                      38
+  Tumor                                2118                    7898
+  undefined                             103                      44
+  Vessel_aSMA                           375                     851
+                   
+                    221102_day3_Haibin_26_2 221102_day3_Haibin_27_3
+  AEC_like                              315                     120
+  AF                                   1054                    1416
+  B                                      81                      16
+  CD4                                    35                      20
+  CD8                                    34                      14
+  Endothelial_CD31                      341                      61
+  Macrophages_CD206                     518                     516
+  Macrophages_F480                      174                     115
+  Monocytes                              84                     247
+  Neutrophils                            31                     355
+  Peritoneum                            129                     115
+  Tumor                                6078                    6461
+  undefined                              97                      80
+  Vessel_aSMA                           283                     807
+                   
+                    221102_day3_Haibin_28_4 221102_day3_Haibin_29_5
+  AEC_like                              517                     287
+  AF                                    832                     525
+  B                                     131                     104
+  CD4                                    72                      47
+  CD8                                    50                      44
+  Endothelial_CD31                      404                     396
+  Macrophages_CD206                     522                     631
+  Macrophages_F480                      136                     169
+  Monocytes                              80                      90
+  Neutrophils                            18                      34
+  Peritoneum                            461                     192
+  Tumor                                1826                    2681
+  undefined                              73                      87
+  Vessel_aSMA                           259                     217
+                   
+                    221102_day3_Haibin_30_6 221102_day3_Haibin_31_7
+  AEC_like                              337                     401
+  AF                                   1199                    1105
+  B                                      71                      83
+  CD4                                    56                      77
+  CD8                                    75                      96
+  Endothelial_CD31                      117                     167
+  Macrophages_CD206                     383                     302
+  Macrophages_F480                      223                     227
+  Monocytes                              89                     125
+  Neutrophils                            20                      53
+  Peritoneum                            261                     261
+  Tumor                                2464                    2915
+  undefined                             125                      93
+  Vessel_aSMA                           425                     292
+                   
+                    221102_day3_Haibin_32_8 221102_day3_Haibin_33_9
+  AEC_like                              282                     353
+  AF                                    930                     829
+  B                                      81                      74
+  CD4                                    98                      80
+  CD8                                   181                     114
+  Endothelial_CD31                      135                     273
+  Macrophages_CD206                     493                     350
+  Macrophages_F480                      556                     173
+  Monocytes                             141                      66
+  Neutrophils                            52                      23
+  Peritoneum                             57                     193
+  Tumor                                4771                    2079
+  undefined                             128                      83
+  Vessel_aSMA                           501                     403
+                   
+                    221102_day3_Haibin_34_10 221102_day3_Haibin_35_11
+  AEC_like                               181                      664
+  AF                                     961                     1699
+  B                                       45                       36
+  CD4                                     66                       66
+  CD8                                     79                      137
+  Endothelial_CD31                       218                      283
+  Macrophages_CD206                     1078                      443
+  Macrophages_F480                       568                      173
+  Monocytes                              109                       46
+  Neutrophils                             18                       10
+  Peritoneum                             336                      219
+  Tumor                                 4438                     4175
+  undefined                               90                      156
+  Vessel_aSMA                            409                      161
+                   
+                    221102_day3_Haibin_36_12 221103_day4_Haibin_37_1
+  AEC_like                               448                     479
+  AF                                     797                    1049
+  B                                       73                      68
+  CD4                                     73                      79
+  CD8                                     71                      84
+  Endothelial_CD31                       176                     312
+  Macrophages_CD206                      407                     491
+  Macrophages_F480                       151                     178
+  Monocytes                               59                      68
+  Neutrophils                             19                      12
+  Peritoneum                             470                     199
+  Tumor                                 1981                    2865
+  undefined                               87                      88
+  Vessel_aSMA                            354                     243
+                   
+                    221103_day4_Haibin_38_2 221103_day4_Haibin_39_3
+  AEC_like                               82                     171
+  AF                                   1244                    2320
+  B                                       6                      16
+  CD4                                     4                      20
+  CD8                                    52                      73
+  Endothelial_CD31                       10                      66
+  Macrophages_CD206                     368                     293
+  Macrophages_F480                      279                     181
+  Monocytes                              61                     107
+  Neutrophils                            41                      70
+  Peritoneum                              6                      43
+  Tumor                                9218                    7111
+  undefined                              43                      50
+  Vessel_aSMA                          1330                     682
+                   
+                    221103_day4_Haibin_40_4 221103_day4_Haibin_41_5
+  AEC_like                              892                     385
+  AF                                    390                    1080
+  B                                     122                     101
+  CD4                                    81                     117
+  CD8                                    98                     159
+  Endothelial_CD31                     1050                     379
+  Macrophages_CD206                     336                     618
+  Macrophages_F480                      149                     360
+  Monocytes                             122                     114
+  Neutrophils                            16                      26
+  Peritoneum                            159                     251
+  Tumor                                3645                    4225
+  undefined                              42                     116
+  Vessel_aSMA                           155                     263
+                   
+                    221103_day4_Haibin_42_6 221103_day4_Haibin_43_7
+  AEC_like                              241                     300
+  AF                                   2190                    2043
+  B                                      65                      78
+  CD4                                   124                     156
+  CD8                                   142                     172
+  Endothelial_CD31                      162                     149
+  Macrophages_CD206                     342                     688
+  Macrophages_F480                      120                     194
+  Monocytes                              48                      76
+  Neutrophils                            49                      31
+  Peritoneum                            190                     214
+  Tumor                                7089                    5467
+  undefined                              61                     151
+  Vessel_aSMA                           771                     601
+                   
+                    221103_day4_Haibin_44_8 221103_day4_Haibin_45_9
+  AEC_like                              409                     674
+  AF                                   1431                    1019
+  B                                      51                      28
+  CD4                                    97                      38
+  CD8                                   188                      34
+  Endothelial_CD31                      240                     357
+  Macrophages_CD206                     461                     798
+  Macrophages_F480                      274                     294
+  Monocytes                              42                      61
+  Neutrophils                            16                      27
+  Peritoneum                            167                      21
+  Tumor                                4527                    2492
+  undefined                             109                     103
+  Vessel_aSMA                           473                     203
+                   
+                    221103_day4_Haibin_46_10 221103_day4_Haibin_47_11
+  AEC_like                               673                      362
+  AF                                    1286                     1346
+  B                                      100                       46
+  CD4                                     83                       69
+  CD8                                     72                       98
+  Endothelial_CD31                       645                      352
+  Macrophages_CD206                      591                      483
+  Macrophages_F480                       114                      186
+  Monocytes                              148                      167
+  Neutrophils                             40                      124
+  Peritoneum                              30                      110
+  Tumor                                 3280                     5694
+  undefined                              128                      100
+  Vessel_aSMA                            418                      471
+                   
+                    221103_day4_Haibin_48-split_20 221103_day4_Haibin_48_12
+  AEC_like                                     378                      271
+  AF                                           294                      436
+  B                                             28                       35
+  CD4                                           28                       35
+  CD8                                           54                       68
+  Endothelial_CD31                             339                      270
+  Macrophages_CD206                            145                      214
+  Macrophages_F480                              78                       96
+  Monocytes                                     66                      112
+  Neutrophils                                   13                       28
+  Peritoneum                                    72                       48
+  Tumor                                       1541                     2446
+  undefined                                     43                       42
+  Vessel_aSMA                                  107                      513
+                   
+                    221103_day4_Haibin_49_13 221103_day4_Haibin_50_14
+  AEC_like                               492                      561
+  AF                                    1177                     1707
+  B                                       69                       33
+  CD4                                     98                       25
+  CD8                                    177                       26
+  Endothelial_CD31                       439                      281
+  Macrophages_CD206                      677                     1259
+  Macrophages_F480                       345                      359
+  Monocytes                               75                       23
+  Neutrophils                             22                       16
+  Peritoneum                             153                       11
+  Tumor                                 4551                     3470
+  undefined                              145                      147
+  Vessel_aSMA                            262                      188
+                   
+                    221103_day4_Haibin_51_15 221103_day4_Haibin_52_16
+  AEC_like                               712                      805
+  AF                                    1693                     1248
+  B                                       36                       45
+  CD4                                     94                       40
+  CD8                                     32                       30
+  Endothelial_CD31                       353                      290
+  Macrophages_CD206                     1426                      764
+  Macrophages_F480                       163                      204
+  Monocytes                               68                      105
+  Neutrophils                             19                      119
+  Peritoneum                              82                      158
+  Tumor                                 3631                     3468
+  undefined                              286                      156
+  Vessel_aSMA                            211                      155
+                   
+                    221103_day4_Haibin_53_17 221103_day4_Haibin_54_18
+  AEC_like                              1053                     1043
+  AF                                    2300                     1352
+  B                                       19                       44
+  CD4                                     39                       36
+  CD8                                     10                       35
+  Endothelial_CD31                       387                      111
+  Macrophages_CD206                      661                      410
+  Macrophages_F480                       169                       28
+  Monocytes                               52                       72
+  Neutrophils                             24                        3
+  Peritoneum                              63                       85
+  Tumor                                 1534                     1078
+  undefined                              241                       23
+  Vessel_aSMA                            304                      269
+                   
+                    22111_day2_Haibin_13_1 22111_day2_Haibin_14_2
+  AEC_like                             209                    538
+  AF                                   784                   1537
+  B                                    186                    226
+  CD4                                  181                    238
+  CD8                                  122                    126
+  Endothelial_CD31                     144                    287
+  Macrophages_CD206                    269                    295
+  Macrophages_F480                     383                    360
+  Monocytes                             99                     90
+  Neutrophils                           41                     38
+  Peritoneum                           351                    281
+  Tumor                               3095                   2595
+  undefined                            105                    136
+  Vessel_aSMA                          251                    287
+                   
+                    22111_day2_Haibin_15_3 22111_day2_Haibin_16_4
+  AEC_like                             331                    289
+  AF                                   885                   2122
+  B                                     53                     97
+  CD4                                   90                     58
+  CD8                                  154                     86
+  Endothelial_CD31                     162                    217
+  Macrophages_CD206                    408                    551
+  Macrophages_F480                     333                    496
+  Monocytes                             78                     94
+  Neutrophils                           35                     90
+  Peritoneum                           343                    106
+  Tumor                               2598                   4111
+  undefined                             85                    108
+  Vessel_aSMA                          237                    386
+                   
+                    22111_day2_Haibin_17_5 22111_day2_Haibin_18_6
+  AEC_like                             246                    169
+  AF                                  1354                   1262
+  B                                     83                     90
+  CD4                                   64                     90
+  CD8                                   48                     78
+  Endothelial_CD31                     188                    190
+  Macrophages_CD206                    498                    893
+  Macrophages_F480                     415                    352
+  Monocytes                            110                     91
+  Neutrophils                           28                     16
+  Peritoneum                           632                    562
+  Tumor                               2232                   3354
+  undefined                            111                    144
+  Vessel_aSMA                          561                    406
+                   
+                    22111_day2_Haibin_19_7 22111_day2_Haibin_20_8
+  AEC_like                             271                     80
+  AF                                   674                   1200
+  B                                    102                    201
+  CD4                                   81                    283
+  CD8                                   96                    333
+  Endothelial_CD31                     236                     89
+  Macrophages_CD206                    444                    481
+  Macrophages_F480                     481                    774
+  Monocytes                             92                    135
+  Neutrophils                           20                    108
+  Peritoneum                           249                      8
+  Tumor                               2525                   5407
+  undefined                             78                     35
+  Vessel_aSMA                          307                    757
+                   
+                    22111_day2_Haibin_21_9 22111_day2_Haibin_22_10
+  AEC_like                             283                     326
+  AF                                   879                     795
+  B                                    140                      86
+  CD4                                  177                     132
+  CD8                                  172                     213
+  Endothelial_CD31                     255                     149
+  Macrophages_CD206                    336                     221
+  Macrophages_F480                     560                     496
+  Monocytes                             85                     108
+  Neutrophils                           80                      37
+  Peritoneum                            43                     209
+  Tumor                               3405                    3054
+  undefined                             94                     107
+  Vessel_aSMA                          230                     280
+                   
+                    22111_day2_Haibin_23_11 221121_ROI12_24_12.2_1
+  AEC_like                              131                    215
+  AF                                   1168                    585
+  B                                      74                    208
+  CD4                                   172                     90
+  CD8                                   276                    168
+  Endothelial_CD31                       64                    127
+  Macrophages_CD206                     415                    422
+  Macrophages_F480                      420                    456
+  Monocytes                              73                     82
+  Neutrophils                            77                     28
+  Peritoneum                             38                    222
+  Tumor                                5837                   4127
+  undefined                              78                     73
+  Vessel_aSMA                           934                    259
+                   
+                    221121_ROI12_24_24.2_2
+  AEC_like                             355
+  AF                                   933
+  B                                    172
+  CD4                                  241
+  CD8                                  174
+  Endothelial_CD31                     253
+  Macrophages_CD206                    634
+  Macrophages_F480                     882
+  Monocytes                            142
+  Neutrophils                           67
+  Peritoneum                            87
+  Tumor                               2860
+  undefined                            162
+  Vessel_aSMA                          226</code></pre>
+</div>
+<div id="save-data" class="section level3">
+<h3>Save data</h3>
+<pre class="r"><code>saveRDS(spe, file.path(&quot;output&quot;, &quot;spe_ca.rds&quot;))</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.2.2 (2022-10-31 ucrt)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 10 x64 (build 19044)
+
+Matrix products: default
+
+locale:
+[1] LC_COLLATE=English_Switzerland.utf8  LC_CTYPE=English_Switzerland.utf8   
+[3] LC_MONETARY=English_Switzerland.utf8 LC_NUMERIC=C                        
+[5] LC_TIME=English_Switzerland.utf8    
+
+attached base packages:
+[1] stats4    stats     graphics  grDevices utils     datasets  methods  
+[8] base     
+
+other attached packages:
+ [1] lubridate_1.9.2             forcats_1.0.0              
+ [3] dplyr_1.1.2                 purrr_1.0.1                
+ [5] readr_2.1.4                 tidyr_1.3.0                
+ [7] tibble_3.2.1                tidyverse_2.0.0            
+ [9] stringr_1.5.0               ggridges_0.5.4             
+[11] caret_6.0-94                lattice_0.20-45            
+[13] Rphenoannoy_0.1.0           Matrix_1.5-3               
+[15] cytomapper_1.10.1           EBImage_4.40.1             
+[17] gridExtra_2.3               pheatmap_1.0.12            
+[19] patchwork_1.1.2             ConsensusClusterPlus_1.60.0
+[21] kohonen_3.0.11              CATALYST_1.20.1            
+[23] scran_1.24.1                scuttle_1.8.4              
+[25] BiocParallel_1.32.6         bluster_1.6.0              
+[27] viridis_0.6.3               viridisLite_0.4.2          
+[29] dittoSeq_1.8.1              Rphenograph_0.99.1         
+[31] igraph_1.4.2                ggplot2_3.4.2              
+[33] SpatialExperiment_1.8.1     SingleCellExperiment_1.20.1
+[35] SummarizedExperiment_1.28.0 Biobase_2.56.0             
+[37] GenomicRanges_1.48.0        GenomeInfoDb_1.34.9        
+[39] IRanges_2.30.0              S4Vectors_0.34.0           
+[41] BiocGenerics_0.44.0         MatrixGenerics_1.10.0      
+[43] matrixStats_0.62.0          workflowr_1.7.0            
+
+loaded via a namespace (and not attached):
+  [1] scattermore_1.0           flowWorkspace_4.8.0      
+  [3] ModelMetrics_1.2.2.2      R.methodsS3_1.8.2        
+  [5] knitr_1.42                irlba_2.3.5.1            
+  [7] multcomp_1.4-23           DelayedArray_0.22.0      
+  [9] R.utils_2.12.2            rpart_4.1.19             
+ [11] data.table_1.14.8         hardhat_1.3.0            
+ [13] RCurl_1.98-1.7            doParallel_1.0.17        
+ [15] generics_0.1.3            flowCore_2.8.0           
+ [17] ScaledMatrix_1.4.1        terra_1.7-29             
+ [19] callr_3.7.3               cowplot_1.1.1            
+ [21] TH.data_1.1-2             RANN_2.6.1               
+ [23] future_1.32.0             ggpointdensity_0.1.0     
+ [25] tzdb_0.4.0                xml2_1.3.4               
+ [27] httpuv_1.6.11             gower_1.0.1              
+ [29] xfun_0.39                 hms_1.1.3                
+ [31] jquerylib_0.1.4           evaluate_0.21            
+ [33] promises_1.2.0.1          fansi_1.0.4              
+ [35] htmlwidgets_1.6.2         Rgraphviz_2.40.0         
+ [37] DBI_1.1.3                 ellipsis_0.3.2           
+ [39] ggcyto_1.24.1             ggnewscale_0.4.8         
+ [41] ggpubr_0.6.0              backports_1.4.1          
+ [43] cytolib_2.8.0             svgPanZoom_0.3.4         
+ [45] RcppParallel_5.1.7        deldir_1.0-6             
+ [47] sparseMatrixStats_1.10.0  vctrs_0.6.2              
+ [49] abind_1.4-5               cachem_1.0.8             
+ [51] withr_2.5.0               ggforce_0.4.1            
+ [53] aws.signature_0.6.0       svglite_2.1.1            
+ [55] cluster_2.1.4             crayon_1.5.2             
+ [57] drc_3.0-1                 labeling_0.4.2           
+ [59] recipes_1.0.6             edgeR_3.40.2             
+ [61] pkgconfig_2.0.3           tweenr_2.0.2             
+ [63] nlme_3.1-162              vipor_0.4.5              
+ [65] nnet_7.3-18               globals_0.16.2           
+ [67] rlang_1.1.1               lifecycle_1.0.3          
+ [69] sandwich_3.0-2            rsvd_1.0.5               
+ [71] randomForest_4.7-1.1      rprojroot_2.0.3          
+ [73] polyclip_1.10-4           tiff_0.1-11              
+ [75] graph_1.74.0              raster_3.6-20            
+ [77] carData_3.0-5             Rhdf5lib_1.20.0          
+ [79] zoo_1.8-12                base64enc_0.1-3          
+ [81] beeswarm_0.4.0            whisker_0.4.1            
+ [83] GlobalOptions_0.1.2       processx_3.8.1           
+ [85] png_0.1-8                 rjson_0.2.21             
+ [87] shinydashboard_0.7.2      bitops_1.0-7             
+ [89] getPass_0.2-2             R.oo_1.25.0              
+ [91] pROC_1.18.2               rhdf5filters_1.10.1      
+ [93] DelayedMatrixStats_1.20.0 shape_1.4.6              
+ [95] parallelly_1.35.0         jpeg_0.1-10              
+ [97] rstatix_0.7.2             ggsignif_0.6.4           
+ [99] aws.s3_0.3.21             beachmat_2.14.2          
+[101] scales_1.2.1              magrittr_2.0.3           
+[103] plyr_1.8.8                hexbin_1.28.3            
+[105] zlibbioc_1.42.0           compiler_4.2.2           
+[107] dqrng_0.3.0               RColorBrewer_1.1-3       
+[109] plotrix_3.8-2             clue_0.3-64              
+[111] cli_3.6.0                 XVector_0.36.0           
+[113] listenv_0.9.0             ncdfFlow_2.42.1          
+[115] ps_1.7.5                  FlowSOM_2.4.0            
+[117] MASS_7.3-58.1             tidyselect_1.2.0         
+[119] stringi_1.7.12            RProtoBufLib_2.8.0       
+[121] highr_0.10                yaml_2.3.7               
+[123] BiocSingular_1.12.0       locfit_1.5-9.7           
+[125] latticeExtra_0.6-30       ggrepel_0.9.3            
+[127] grid_4.2.2                sass_0.4.6               
+[129] timechange_0.2.0          tools_4.2.2              
+[131] future.apply_1.10.0       parallel_4.2.2           
+[133] CytoML_2.8.1              circlize_0.4.15          
+[135] rstudioapi_0.14           foreach_1.5.2            
+[137] git2r_0.32.0              metapod_1.4.0            
+[139] prodlim_2023.03.31        farver_2.1.1             
+[141] Rtsne_0.16                DropletUtils_1.18.1      
+[143] digest_0.6.31             lava_1.7.2.1             
+[145] shiny_1.7.4               Rcpp_1.0.10              
+[147] car_3.1-2                 broom_1.0.4              
+[149] later_1.3.1               httr_1.4.6               
+[151] ComplexHeatmap_2.12.1     colorspace_2.1-0         
+[153] XML_3.99-0.14             fs_1.6.2                 
+[155] splines_4.2.2             RBGL_1.72.0              
+[157] statmod_1.5.0             scater_1.24.0            
+[159] sp_1.6-0                  systemfonts_1.0.4        
+[161] xtable_1.8-4              jsonlite_1.8.4           
+[163] timeDate_4022.108         ipred_0.9-14             
+[165] R6_2.5.1                  mime_0.12                
+[167] pillar_1.9.0              htmltools_0.5.4          
+[169] nnls_1.4                  glue_1.6.2               
+[171] fastmap_1.1.1             fftwtools_0.9-11         
+[173] BiocNeighbors_1.16.0      class_7.3-21             
+[175] codetools_0.2-19          mvtnorm_1.1-3            
+[177] utf8_1.2.3                bslib_0.4.2              
+[179] curl_5.0.0                ggbeeswarm_0.7.2         
+[181] colorRamps_2.3.1          gtools_3.9.4             
+[183] magick_2.7.4              interp_1.1-4             
+[185] survival_3.5-3            limma_3.54.2             
+[187] rmarkdown_2.21            munsell_0.5.0            
+[189] GetoptLong_1.0.5          rhdf5_2.42.1             
+[191] GenomeInfoDbData_1.2.9    iterators_1.0.14         
+[193] HDF5Array_1.26.0          reshape2_1.4.4           
+[195] gtable_0.3.3             </code></pre>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
