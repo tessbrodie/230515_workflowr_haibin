@@ -405,7 +405,7 @@ aria-hidden="true"></span> </a>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2023-05-17
+<strong>Last updated:</strong> 2023-05-30
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -563,13 +563,13 @@ laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haib
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongdf8bfef">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrong7578faa">
 <span class="glyphicon glyphicon-ok text-success"
-aria-hidden="true"></span> <strong>Repository version:</strong> df8bfef
+aria-hidden="true"></span> <strong>Repository version:</strong> 7578faa
 </a>
 </p>
 </div>
-<div id="strongRepositoryversionstrongdf8bfef"
+<div id="strongRepositoryversionstrong7578faa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -578,7 +578,7 @@ and connecting the code version to the results is critical for
 reproducibility.
 </p>
 <p>
-The results in this page were generated with repository version df8bfef.
+The results in this page were generated with repository version 7578faa.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -600,14 +600,13 @@ Ignored files:
     Ignored:    analysis/2_IMCA_cell_annotation_cache/
     Ignored:    analysis/4_img_vis_cache/
     Ignored:    analysis/6_statistics_cache/
+    Ignored:    analysis/figure/
 
 Untracked files:
     Untracked:  3_communities_v2.png
     Untracked:  6_communities_v3.png
-    Untracked:  analysis/4_img_vis.Rmd
     Untracked:  analysis/5_spatial_vis.Rmd
     Untracked:  analysis/6_statistics.Rmd
-    Untracked:  analysis/6_statistics_v2.Rmd
     Untracked:  data/images.csv
     Untracked:  data/images.rds
     Untracked:  data/img/
@@ -626,6 +625,10 @@ Untracked files:
     Untracked:  output/spe3.rds
     Untracked:  output/spe4.rds
     Untracked:  output/spe_ca.rds
+
+Unstaged changes:
+    Deleted:    analysis/about.Rmd
+    Deleted:    analysis/license.Rmd
 
 </code></pre>
 <p>
@@ -671,6 +674,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+7578faa
+</td>
+<td>
+Tess Brodie
+</td>
+<td>
+2023-05-30
+</td>
+<td>
+wflow_publish("analysis/3_dim_red.Rmd", delete_cache = TRUE)
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+bbf070f
+</td>
+<td>
+Tess Brodie
+</td>
+<td>
+2023-05-17
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -819,12 +856,24 @@ p1 &lt;- dittoDimPlot(spe_small,
              size = 0.6,
              do.label = FALSE)
 
-p2 &lt;-dittoBarPlot(spe, var = &quot;celltype&quot;, group.by = &quot;condition&quot;)
-p3 &lt;-dittoBarPlot(spe, var = &quot;condition&quot;, group.by = &quot;celltype&quot;)
+p2 &lt;- dittoBarPlot(spe, var = &quot;celltype&quot;, group.by = &quot;condition&quot;)
+p3 &lt;- dittoBarPlot(spe, var = &quot;condition&quot;, group.by = &quot;celltype&quot;)
 
 plot_grid(p1, p2, p3,
           ncol = 1)</code></pre>
 <p><img src="figure/3_dim_red.Rmd/celltype%20by%20condition-1.png" width="960" style="display: block; margin: auto;" /></p>
+<p>#Double split barplots</p>
+<pre class="r"><code>plotdata &lt;- as.data.frame(colData(spe)[, c(&quot;celltype&quot;, &quot;annotation&quot;, &quot;condition&quot;)])
+plotdata &lt;- as.data.frame(table(plotdata)) 
+
+ggplot(plotdata, aes(x = annotation, y = Freq, fill = condition)) + 
+  geom_col() +
+  facet_grid( ~ celltype)</code></pre>
+<p><img src="figure/3_dim_red.Rmd/celltype%20by%20condition%20and%20annotation-1.png" width="960" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggplot(plotdata, aes(x = annotation, y = Freq, fill = condition)) + 
+  geom_col() +
+  facet_wrap( ~ celltype, scales = &quot;free&quot;, ncol = 14)</code></pre>
+<p><img src="figure/3_dim_red.Rmd/celltype%20by%20condition%20and%20annotation-2.png" width="960" style="display: block; margin: auto;" /></p>
 <p>#Celltype UMAP split by annotation</p>
 <pre class="r"><code>p1 &lt;-dittoDimPlot(spe_small, 
              var = &quot;celltype&quot;,
