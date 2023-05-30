@@ -139,11 +139,27 @@ p1 <- dittoDimPlot(spe_small,
              size = 0.6,
              do.label = FALSE)
 
-p2 <-dittoBarPlot(spe, var = "celltype", group.by = "condition")
-p3 <-dittoBarPlot(spe, var = "condition", group.by = "celltype")
+p2 <- dittoBarPlot(spe, var = "celltype", group.by = "condition")
+p3 <- dittoBarPlot(spe, var = "condition", group.by = "celltype")
 
 plot_grid(p1, p2, p3,
           ncol = 1)
+
+```
+
+#Double split barplots
+
+```{r celltype by condition and annotation, fig.width= 10, fig.height= 12}
+plotdata <- as.data.frame(colData(spe)[, c("celltype", "annotation", "condition")])
+plotdata <- as.data.frame(table(plotdata)) 
+
+ggplot(plotdata, aes(x = annotation, y = Freq, fill = condition)) + 
+  geom_col() +
+  facet_grid( ~ celltype)
+
+ggplot(plotdata, aes(x = annotation, y = Freq, fill = condition)) + 
+  geom_col() +
+  facet_wrap( ~ celltype, scales = "free", ncol = 14)
 
 ```
 
