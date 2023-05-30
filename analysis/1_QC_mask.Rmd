@@ -56,6 +56,11 @@ library(Seurat)
 library(SeuratObject)
 library(cowplot)
 library(gtools)
+
+#Outlier labeling function
+is_outlier <- function(x) {
+  return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))
+}
 ```
 
 ### Load data
@@ -207,19 +212,30 @@ cur_snr %>%
 
 ### Image area covered by cells 
 
-```{r cell coverage}
-colData(spe) %>%
+```{r cell coverage, echo = FALSE}
+coverage_data <- colData(spe) %>%
     as.data.frame() %>%
     group_by(ROI) %>%
     summarize(cell_area = sum(area),
            no_pixels = mean(width_px) * mean(height_px)) %>%
     mutate(covered_area = cell_area / no_pixels) %>%
-    ggplot() +
-        geom_point(aes(ROI, covered_area)) + 
+    cbind(., anno = spe@metadata$meta_final$annotation)
+
+    ggplot(coverage_data) +
+        geom_point(aes(ROI, covered_area, color = anno)) + 
+        theme_minimal(base_size = 15) +
+        ylim(c(0, 1)) + 
+        theme(axis.text.x = element_text(size = 8)) +
+        ylab("% covered area") + xlab("")
+    
+        ggplot(coverage_data) +
+        geom_boxplot(aes(anno, covered_area, color = anno)) + 
         theme_minimal(base_size = 15) +
         ylim(c(0, 1)) + 
         theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +
         ylab("% covered area") + xlab("")
+    
+    
 ```
 
 
