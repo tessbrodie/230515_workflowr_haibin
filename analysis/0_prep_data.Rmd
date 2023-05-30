@@ -137,9 +137,17 @@ rowData(spe)$use_channel <- grepl("a-SMA|CD19|HNFa|CD11b|F4_80|CD44|CD3e|E-cadhe
 
 ```{r, cellcounts, fig.width=8, fig.height=5}
 plotCounts(spe, 
-    group_by = "ROI", 
+    group_by = c("ROI"), 
     color_by = "condition") +
             ylim(0, 15000)
+
+plotCounts(spe, 
+    group_by = "condition", 
+    color_by = "condition")
+
+plotCounts(spe, 
+    group_by = "annotation", 
+    color_by = "condition")
 ```
 
 ### Define colors
