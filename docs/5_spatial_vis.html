@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Tess and Tural" />
+
+
+<title>IMC data analysis workflow</title>
+
+<script src="site_libs/header-attrs-2.21/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.4.0/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.0/css/v4-shims.min.css" rel="stylesheet" />
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">230515_workflowr_haibin</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Contents</a>
+</li>
+<li>
+  <a href="0_prep_data.html">Data prep</a>
+</li>
+<li>
+  <a href="1_QC_mask.html">QC mask</a>
+</li>
+<li>
+  <a href="2_IMCA_cell_annotation.html">Cell ann</a>
+</li>
+<li>
+  <a href="3_dim_red.html">Dim red</a>
+</li>
+<li>
+  <a href="4_img_vis.html">Img vis</a>
+</li>
+<li>
+  <a href="5_spatial_vis.html">Spatial</a>
+</li>
+<li>
+  <a href="6_statistics.html">Stats</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/tessbrodie/230515_workflowr_haibin">
+    <span class="fab fa-github"></span>
+     
+    Source code
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">IMC data analysis workflow</h1>
+<h4 class="author">Tess and Tural</h4>
+<h4 class="date">University of Bern, DBMR, Visceral and Transplantation
+Surgery lab</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> </a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2023-05-30
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 1
+</p>
+<p>
+<strong>Knit directory:</strong> <code>230515_workflowr_haibin/</code>
+<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.0). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20230515code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20230515)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20230515code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20230515)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongabsolute">
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> <strong>File paths:</strong> absolute </a>
+</p>
+</div>
+<div id="strongFilepathsstrongabsolute" class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Using absolute paths to the files within your workflowr project makes it
+difficult for you and others to run your code on a different machine.
+Change the absolute path(s) below to the suggested relative path(s) to
+make your code more reproducible.
+</p>
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th style="text-align:left;">
+absolute
+</th>
+<th style="text-align:left;">
+relative
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+C:/Users/IMC Platform
+laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haibin
+</td>
+<td style="text-align:left;">
+.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrong145c500">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong> 145c500
+</a>
+</p>
+</div>
+<div id="strongRepositoryversionstrong145c500"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version 145c500.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+    Ignored:    analysis/0_prep_data_cache/
+    Ignored:    analysis/1_QC_mask_cache/
+    Ignored:    analysis/2_IMCA_cell_annotation_cache/
+    Ignored:    analysis/3_dim_red_cache/
+    Ignored:    analysis/4_img_vis_cache/
+    Ignored:    analysis/6_statistics_cache/
+
+Untracked files:
+    Untracked:  3_communities_v2.png
+    Untracked:  6_communities_v3.png
+    Untracked:  analysis/6_statistics.Rmd
+    Untracked:  data/images.csv
+    Untracked:  data/images.rds
+    Untracked:  data/img/
+    Untracked:  data/intensities/
+    Untracked:  data/masks.rds
+    Untracked:  data/masks/
+    Untracked:  data/neighbors/
+    Untracked:  data/panel.csv
+    Untracked:  data/raw/
+    Untracked:  data/regionprops/
+    Untracked:  data/sample_metadata.xlsx
+    Untracked:  data/sample_metadata_shortened.xlsx
+    Untracked:  output/rffit.rds
+    Untracked:  output/spe0.rds
+    Untracked:  output/spe1.rds
+    Untracked:  output/spe3.rds
+    Untracked:  output/spe4.rds
+    Untracked:  output/spe_ca.rds
+
+Unstaged changes:
+    Deleted:    analysis/about.Rmd
+    Deleted:    analysis/license.Rmd
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/5_spatial_vis.Rmd</code>) and
+HTML (<code>docs/5_spatial_vis.html</code>) files. If you’ve configured
+a remote Git repository (see <code>?wflow_git_remote</code>), click on
+the hyperlinks in the table below to view the files as they were in that
+past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+145c500
+</td>
+<td>
+Tess Brodie
+</td>
+<td>
+2023-05-30
+</td>
+<td>
+wflow_publish("analysis/5_spatial_vis.Rmd", delete_cache = TRUE)
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="spatial-analysis" class="section level2">
+<h2>Spatial analysis</h2>
+<style type="text/css">
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+</style>
+<div id="load-packages" class="section level3">
+<h3>Load packages</h3>
+<pre class="r"><code>library(SpatialExperiment)</code></pre>
+<pre><code>Warning: multiple methods tables found for &#39;aperm&#39;</code></pre>
+<pre><code>Warning: replacing previous import &#39;BiocGenerics::aperm&#39; by
+&#39;DelayedArray::aperm&#39; when loading &#39;SummarizedExperiment&#39;</code></pre>
+<pre><code>Warning: replacing previous import &#39;BiocGenerics::aperm&#39; by
+&#39;DelayedArray::aperm&#39; when loading &#39;HDF5Array&#39;</code></pre>
+<pre class="r"><code>library(imcRtools)
+library(ggplot2)</code></pre>
+<pre><code>Warning: package &#39;ggplot2&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(viridis)</code></pre>
+<pre><code>Warning: package &#39;viridis&#39; was built under R version 4.2.3</code></pre>
+<pre><code>Warning: package &#39;viridisLite&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(igraph)</code></pre>
+<pre><code>Warning: package &#39;igraph&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(pheatmap)
+library(tidyverse)</code></pre>
+<pre><code>Warning: package &#39;tibble&#39; was built under R version 4.2.3</code></pre>
+<pre><code>Warning: package &#39;dplyr&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(lisaClust)
+library(spicyR)
+library(circlize)
+library(RColorBrewer)
+library(cytomapper)</code></pre>
+<pre><code>Warning: package &#39;EBImage&#39; was built under R version 4.2.3</code></pre>
+<pre class="r"><code>library(patchwork)
+library(tidyverse)
+library(scales)
+library(dittoSeq)
+library(BiocParallel)</code></pre>
+</div>
+<div id="load-data" class="section level3">
+<h3>Load data</h3>
+</div>
+<div id="spatial-interaction-graphs-only-run-once--very-long"
+class="section level3">
+<h3>Spatial interaction graphs (only run once- very long)</h3>
+</div>
+<div id="save-data-with-interaction-graphs" class="section level3">
+<h3>Save data with interaction graphs</h3>
+</div>
+<div id="load-data-1" class="section level3">
+<h3>Load data</h3>
+<pre class="r"><code>spe &lt;- readRDS(file.path(&quot;output&quot;, &quot;spe4.rds&quot;))</code></pre>
+</div>
+<div id="define-colors" class="section level3">
+<h3>Define colors</h3>
+<pre class="r"><code>color_vectors &lt;- list()
+
+#For the ROI
+ROI &lt;- setNames(dittoColors(reps = 1)[seq_along(unique(spe$sample_id))], 
+                unique(spe$ROI))
+#For the patient ID
+patient_id &lt;- setNames(brewer.pal(length(unique(spe$patient_id)), name = &quot;Set1&quot;), 
+                unique(spe$patient_id))
+#For the sample ID
+sample_id &lt;- setNames(dittoColors(reps = 1)[seq_along(unique(spe$sample_id))], 
+                unique(spe$sample_id))
+#For the condition
+condition &lt;- setNames(brewer.pal(length(unique(spe$condition)), name = &quot;Set2&quot;), 
+                unique(spe$condition))</code></pre>
+<pre><code>Warning in brewer.pal(length(unique(spe$condition)), name = &quot;Set2&quot;): minimal value for n is 3, returning requested palette with 3 different levels</code></pre>
+<pre class="r"><code>#For the annotation
+annotation &lt;- setNames(brewer.pal(length(unique(spe$annotation)), name = &quot;Set3&quot;), 
+                unique(spe$annotation))
+#For cell type
+celltype &lt;- setNames(dittoColors(reps = 1)[seq_along(unique(spe$sample_id))], 
+                unique(spe$celltype))
+
+color_vectors$ROI &lt;- ROI
+color_vectors$patient_id &lt;- patient_id
+color_vectors$sample_id &lt;- sample_id
+color_vectors$condition &lt;- condition
+color_vectors$annotation &lt;- annotation
+color_vectors$celltype &lt;- celltype
+
+metadata(spe)$color_vectors &lt;- color_vectors</code></pre>
+</div>
+<div id="interaction-graphs" class="section level3">
+<h3>Interaction graphs</h3>
+<pre class="r"><code># steinbock interaction graph 
+plotSpatial(spe[,spe$sample_id == &quot;221031_day1_Haibin_1_6&quot;], 
+            node_color_by = &quot;celltype&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            draw_edges = TRUE, 
+            colPairName = &quot;neighborhood&quot;, 
+            nodes_first = FALSE, 
+            edge_color_fix = &quot;grey&quot;) + 
+    scale_color_manual(values = metadata(spe)$color_vectors$celltype) +
+    ggtitle(&quot;steinbock interaction graph&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/steinbock_interaction-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># knn interaction graph 
+plotSpatial(spe[,spe$sample_id == &quot;221031_day1_Haibin_1_6&quot;], 
+            node_color_by = &quot;celltype&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            draw_edges = TRUE, 
+            colPairName = &quot;knn_interaction_graph&quot;, 
+            nodes_first = FALSE,
+            edge_color_fix = &quot;grey&quot;) + 
+    scale_color_manual(values = metadata(spe)$color_vectors$celltype) +
+    ggtitle(&quot;knn interaction graph&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/KNN_interaction-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># expansion interaction graph 
+plotSpatial(spe[,spe$sample_id == &quot;221031_day1_Haibin_1_6&quot;], 
+            node_color_by = &quot;celltype&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            draw_edges = TRUE, 
+            colPairName = &quot;expansion_interaction_graph&quot;, 
+            nodes_first = FALSE, 
+            directed = FALSE,
+            edge_color_fix = &quot;grey&quot;) + 
+    scale_color_manual(values = metadata(spe)$color_vectors$celltype) +
+    ggtitle(&quot;expansion interaction graph&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/expansion_interaction-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># delaunay interaction graph 
+plotSpatial(spe[,spe$sample_id == &quot;221031_day1_Haibin_1_6&quot;], 
+            node_color_by = &quot;celltype&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            draw_edges = TRUE, 
+            colPairName = &quot;delaunay_interaction_graph&quot;, 
+            nodes_first = FALSE,
+            edge_color_fix = &quot;grey&quot;) + 
+    scale_color_manual(values = metadata(spe)$color_vectors$celltype) +
+    ggtitle(&quot;delaunay interaction graph&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/delaunay_interaction-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>plotSpatial(spe[,spe$sample_id == &quot;221031_day1_Haibin_1_6&quot;], 
+            node_color_by = &quot;E-cadherin&quot;, 
+            assay_type = &quot;exprs&quot;,
+            img_id = &quot;sample_id&quot;, 
+            draw_edges = TRUE, 
+            colPairName = &quot;expansion_interaction_graph&quot;, 
+            nodes_first = FALSE, 
+            node_size_by = &quot;area&quot;, 
+            directed = FALSE,
+            edge_color_fix = &quot;grey&quot;) + 
+    scale_size_continuous(range = c(0.1, 2)) +
+    ggtitle(&quot;E-cadherin expression&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/interaction_targetexprs-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="plot-cell-types" class="section level3">
+<h3>Plot cell types</h3>
+<pre class="r"><code>plotSpatial(spe, 
+            node_color_by = &quot;celltype&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5) </code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/plot_cell_type_all-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    scale_color_manual(values = metadata(spe)$color_vectors$celltype)</code></pre>
+<pre><code>&lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;
+    aesthetics: colour
+    axis_order: function
+    break_info: function
+    break_positions: function
+    breaks: waiver
+    call: call
+    clone: function
+    dimension: function
+    drop: TRUE
+    expand: waiver
+    get_breaks: function
+    get_breaks_minor: function
+    get_labels: function
+    get_limits: function
+    guide: legend
+    is_discrete: function
+    is_empty: function
+    labels: waiver
+    limits: function
+    make_sec_title: function
+    make_title: function
+    map: function
+    map_df: function
+    n.breaks.cache: NULL
+    na.translate: TRUE
+    na.value: grey50
+    name: waiver
+    palette: function
+    palette.cache: NULL
+    position: left
+    range: environment
+    rescale: function
+    reset: function
+    scale_name: manual
+    train: function
+    train_df: function
+    transform: function
+    transform_df: function
+    super:  &lt;ggproto object: Class ScaleDiscrete, Scale, gg&gt;</code></pre>
+</div>
+<div id="spatial-community-analysis" class="section level3">
+<h3>Spatial community analysis</h3>
+<pre class="r"><code>spe$tumor_stroma &lt;- ifelse(spe$celltype == &quot;Tumor&quot;, &quot;Tumor&quot;, &quot;Stroma&quot;)
+
+spe &lt;- detectCommunity(spe, 
+                       colPairName = &quot;neighborhood&quot;, 
+                       size_threshold = 10,
+                       group_by = &quot;tumor_stroma&quot;,
+                       BPPARAM = SerialParam(RNGseed = 220819))</code></pre>
+</div>
+<div id="plot-communities-of-tumor-and-notumor" class="section level3">
+<h3>Plot communities of tumor and notumor</h3>
+<pre class="r"><code>plotSpatial(spe[,spe$celltype == &quot;Tumor&quot;], 
+            node_color_by = &quot;spatial_community&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5) +
+    theme(legend.position = &quot;none&quot;) +
+    ggtitle(&quot;Spatial tumor communities&quot;) </code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/plot%20tumor%20communities-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    # scale_color_manual(values = rev(colors()))</code></pre>
+</div>
+<div id="plot-nontumor-communities" class="section level3">
+<h3>Plot nontumor communities</h3>
+<pre class="r"><code>plotSpatial(spe[,spe$celltype != &quot;Tumor&quot;], 
+            node_color_by = &quot;spatial_community&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5) +
+    theme(legend.position = &quot;none&quot;) +
+    ggtitle(&quot;Spatial non-tumor communities&quot;) </code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/plot%20nontumor%20communities-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    # scale_color_manual(values = rev(colors()))</code></pre>
+</div>
+<div id="plot-nontumor-community-heatmap" class="section level3">
+<h3>Plot nontumor community heatmap</h3>
+<pre class="r"><code>for_plot &lt;- prop.table(table(spe[,spe$celltype != &quot;Tumor&quot;]$spatial_community, 
+                             spe[,spe$celltype != &quot;Tumor&quot;]$celltype), margin = 1)
+
+pheatmap(for_plot, color = viridis(100), show_rownames = FALSE)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/community_nontumor_heatmap-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>for_plot &lt;- prop.table(table(spe$spatial_community, 
+                             spe$celltype), margin = 1)
+
+pheatmap(for_plot, color = viridis(100), show_rownames = FALSE)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/community_all_heatmap-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="cellular-neighborhood-analysis" class="section level3">
+<h3>Cellular neighborhood analysis</h3>
+</div>
+<div id="cn_1-is-neighborhoods-made-by-cell-types"
+class="section level3">
+<h3>Cn_1 is neighborhoods made by cell types</h3>
+<pre class="r"><code># By celltypes
+spe &lt;- aggregateNeighbors(spe, colPairName = &quot;knn_interaction_graph&quot;, 
+                          aggregate_by = &quot;metadata&quot;, count_by = &quot;celltype&quot;)
+
+set.seed(322)
+cn_cell1 &lt;- kmeans(spe$aggregatedNeighbors, centers = 4)
+set.seed(322)
+cn_cell2 &lt;- kmeans(spe$aggregatedNeighbors, centers = 5)
+set.seed(322)
+cn_cell3 &lt;- kmeans(spe$aggregatedNeighbors, centers = 6)</code></pre>
+<pre class="r"><code>spe$cn_celltypes &lt;- as.factor(cn_cell3$cluster)
+
+plotSpatial(spe, 
+            node_color_by = &quot;cn_celltypes&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5) +
+    scale_color_brewer(palette = &quot;Set3&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/knn_interaction_graph-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>for_plot &lt;- colData(spe) %&gt;% as_tibble() %&gt;%
+    group_by(cn_celltypes, celltype) %&gt;%
+    summarize(count = n()) %&gt;%
+    mutate(freq = count / sum(count)) %&gt;%
+    pivot_wider(id_cols = cn_celltypes, names_from = celltype, 
+                values_from = freq, values_fill = 0) %&gt;%
+    ungroup() %&gt;%
+    select(-cn_celltypes)</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;cn_celltypes&#39;. You can override using the
+`.groups` argument.</code></pre>
+<pre class="r"><code>pheatmap(for_plot, color = colorRampPalette(c(&quot;dark blue&quot;, &quot;white&quot;, &quot;dark red&quot;))(100), 
+         scale = &quot;column&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/knn_interaction_heatmap-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>#Double split barplots</p>
+<pre class="r"><code>plotdata &lt;- as.data.frame(colData(spe)[, c(&quot;cn_celltypes&quot;, &quot;annotation&quot;, &quot;condition&quot;)])
+plotdata &lt;- as.data.frame(table(plotdata)) 
+
+ggplot(plotdata, aes(x = annotation, y = Freq, fill = condition)) + 
+  geom_col() +
+  facet_grid( ~ cn_celltypes)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/celltype%20communities%20by%20condition%20and%20annotation-1.png" width="960" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggplot(plotdata, aes(x = annotation, y = Freq, fill = condition)) + 
+  geom_col() +
+  facet_wrap( ~ cn_celltypes, scales = &quot;free&quot;, ncol = 14)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/celltype%20communities%20by%20condition%20and%20annotation-2.png" width="960" style="display: block; margin: auto;" /></p>
+</div>
+<div
+id="cn2-is-neighborhoods-made-by-target-expression-in-20-nearest-neighbors"
+class="section level3">
+<h3>Cn2 is neighborhoods made by target expression in 20 nearest
+neighbors</h3>
+<pre class="r"><code># By expression
+spe &lt;- aggregateNeighbors(spe, colPairName = &quot;knn_interaction_graph&quot;, 
+                          aggregate_by = &quot;expression&quot;, assay_type = &quot;exprs&quot;,
+                          subset_row = rowData(spe)$use_channel)
+cn_exp &lt;- kmeans(spe$mean_aggregatedExpression, centers = 6)
+spe$cn_expression &lt;- as.factor(cn_exp$cluster)
+
+plotSpatial(spe, 
+            node_color_by = &quot;cn_expression&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5) +
+    scale_color_brewer(palette = &quot;Set3&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/neighborhoods_by_exprs-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>for_plot &lt;- colData(spe) %&gt;% as_tibble() %&gt;%
+    group_by(cn_expression, celltype) %&gt;%
+    summarize(count = n()) %&gt;%
+    mutate(freq = count / sum(count)) %&gt;%
+    pivot_wider(id_cols = cn_expression, names_from = celltype, 
+                values_from = freq, values_fill = 0) %&gt;%
+    ungroup() %&gt;%
+    select(-cn_expression)</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;cn_expression&#39;. You can override using the
+`.groups` argument.</code></pre>
+<pre class="r"><code>pheatmap(for_plot, color = colorRampPalette(c(&quot;dark blue&quot;, &quot;white&quot;, &quot;dark red&quot;))(100), 
+         scale = &quot;column&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/neighborhoods_by_expression_heatmap-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div
+id="cellular-neighborhood-analysis-lisaclust-package-computes-local-indicators-of-spatial-associations-lisa-functions-and-cluster-cells-based-on-those"
+class="section level3">
+<h3>Cellular neighborhood analysis: lisaClust package computes local
+indicators of spatial ###associations (LISA) functions and cluster cells
+based on those</h3>
+</div>
+<div id="does-not-work-yet" class="section level3">
+<h3>Does not work yet</h3>
+</div>
+<div id="spatial-context-analysis-takes-a-while" class="section level3">
+<h3>Spatial context analysis (takes a while)</h3>
+<pre class="r"><code># Generate k-nearest neighbor graph for SC detection (k=40) 
+spe &lt;- buildSpatialGraph(spe, img_id = &quot;sample_id&quot;, 
+                         type = &quot;knn&quot;, 
+                         name = &quot;knn_spatialcontext_graph&quot;, 
+                         k = 40)</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>Warning in (function (to_check, X, clust_centers, clust_info, dtype, nn, :
+detected tied distances to neighbors, see ?&#39;BiocNeighbors-ties&#39;</code></pre>
+<pre><code>The returned object is ordered by the &#39;sample_id&#39; entry.</code></pre>
+<pre class="r"><code># Aggregate based on clustered_neighbors
+spe &lt;- aggregateNeighbors(spe, 
+                          colPairName = &quot;knn_spatialcontext_graph&quot;,
+                          aggregate_by = &quot;metadata&quot;,
+                          count_by = &quot;cn_celltypes&quot;,
+                          name = &quot;aggregatedNeighborhood&quot;)
+
+# Detect spatial contexts
+spe &lt;- detectSpatialContext(spe, 
+                            entry = &quot;aggregatedNeighborhood&quot;,
+                            threshold = 0.90,
+                            name = &quot;spatial_context&quot;)
+
+# Define SC color scheme
+col_SC &lt;- setNames(colorRampPalette(brewer.pal(9, &quot;Paired&quot;))(length(unique(spe$spatial_context))), 
+                   sort(unique(spe$spatial_context)))
+
+# Visualize spatial contexts on images
+plotSpatial(spe, 
+            node_color_by = &quot;spatial_context&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5, 
+            colPairName = &quot;knn_spatialcontext_graph&quot;) +
+    scale_color_manual(values = col_SC)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/spatial_context_analysis-1.png" width="2400" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># Compare CN and SC for one patient 
+p1 &lt;- plotSpatial(spe[,spe$sample_id == &quot;221031_day1_Haibin_1_6&quot;], 
+            node_color_by = &quot;cn_celltypes&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5, 
+            colPairName = &quot;knn_interaction_graph&quot;) +
+    scale_color_brewer(palette = &quot;Set3&quot;)
+
+p2 &lt;- plotSpatial(spe[,spe$sample_id == &quot;221031_day1_Haibin_1_6&quot;], 
+            node_color_by = &quot;spatial_context&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5, 
+            colPairName = &quot;knn_spatialcontext_graph&quot;) +
+    scale_color_manual(values = col_SC, limits = force)
+
+p1 + p2</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/compare_CN_SC-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>## Filter spatial contexts
+# By number of group entries
+spe &lt;- filterSpatialContext(spe, 
+                            entry = &quot;spatial_context&quot;,
+                            group_by = &quot;patient_id&quot;, 
+                            group_threshold = 3)
+
+plotSpatial(spe, 
+            node_color_by = &quot;spatial_context_filtered&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5, 
+            colPairName = &quot;knn_spatialcontext_graph&quot;) +
+    scale_color_manual(values = col_SC, limits = force)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/filter_SC-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># By number of group entries and total number of cells
+spe &lt;- filterSpatialContext(spe, 
+                            entry = &quot;spatial_context&quot;,
+                            group_by = &quot;patient_id&quot;, 
+                            group_threshold = 3,
+                            cells_threshold = 100)
+
+plotSpatial(spe, 
+            node_color_by = &quot;spatial_context_filtered&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5, 
+            colPairName = &quot;knn_spatialcontext_graph&quot;) +
+    scale_color_manual(values = col_SC, limits = force)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/filter_SC_bycellnumber-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>## Plot spatial context graph 
+
+# Colored by name and size by n_cells
+plotSpatialContext(spe, 
+                   entry = &quot;spatial_context_filtered&quot;,
+                   group_by = &quot;sample_id&quot;,
+                   node_color_by = &quot;name&quot;,
+                   node_size_by = &quot;n_cells&quot;,
+                   node_label_color_by = &quot;name&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/sc_graphs-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># Colored by n_cells and size by n_group                   
+plotSpatialContext(spe, 
+                   entry = &quot;spatial_context_filtered&quot;,
+                   group_by = &quot;sample_id&quot;,
+                   node_color_by = &quot;n_cells&quot;,
+                   node_size_by = &quot;n_group&quot;,
+                   node_label_color_by = &quot;n_cells&quot;) +
+  scale_color_viridis()</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/SC_graphs_ncellsngroup_color-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="patch-detection" class="section level3">
+<h3>Patch detection</h3>
+<pre class="r"><code>spe &lt;- patchDetection(spe, 
+                      patch_cells = spe$celltype == &quot;Tumor&quot;,
+                      img_id = &quot;sample_id&quot;,
+                      expand_by = 1,
+                      min_patch_size = 10,
+                      colPairName = &quot;neighborhood&quot;)</code></pre>
+<pre><code>The returned object is ordered by the &#39;sample_id&#39; entry.</code></pre>
+<pre class="r"><code>plotSpatial(spe, 
+            node_color_by = &quot;patch_id&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5) +
+    theme(legend.position = &quot;none&quot;) </code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/patch%20detection-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    # scale_color_manual(values = colors())</code></pre>
+<pre class="r"><code>colData(spe) %&gt;% as_tibble() %&gt;%
+    group_by(patch_id, sample_id) %&gt;%
+    summarize(Tcell_count = sum(celltype == &quot;CD8&quot; | celltype == &quot;CD4&quot;),
+              patch_size = n(),
+              Tcell_freq = Tcell_count / patch_size) %&gt;%
+    ggplot() +
+        geom_point(aes(log10(patch_size), Tcell_freq, color = sample_id)) +
+    theme_classic()</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;patch_id&#39;. You can override using the
+`.groups` argument.</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/T%20cell%20infiltration-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>patch_size &lt;- patchSize(spe, &quot;patch_id&quot;)
+
+patch_size &lt;- merge(patch_size, 
+                    colData(spe)[match(patch_size$patch_id, spe$patch_id),], 
+                    by = &quot;patch_id&quot;)
+
+ggplot(as.data.frame(patch_size)) + 
+    geom_boxplot(aes(patient_id, log10(size))) +
+    geom_point(aes(patient_id, log10(size)))</code></pre>
+<pre><code>Warning: Removed 1 rows containing non-finite values (`stat_boxplot()`).</code></pre>
+<pre><code>Warning: Removed 1 rows containing missing values (`geom_point()`).</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/patch_size-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>spe &lt;- minDistToCells(spe, 
+                      x_cells = !is.na(spe$patch_id), 
+                      img_id = &quot;sample_id&quot;)</code></pre>
+<pre><code>The returned object is ordered by the &#39;sample_id&#39; entry.</code></pre>
+<pre class="r"><code>plotSpatial(spe, 
+            node_color_by = &quot;distToCells&quot;, 
+            img_id = &quot;sample_id&quot;, 
+            node_size_fix = 0.5) +
+    scale_color_gradient2(low = &quot;dark blue&quot;, mid = &quot;white&quot;, high = &quot;dark red&quot;)</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/min_dist_cells-1.png" width="1920" style="display: block; margin: auto;" /></p>
+</div>
+<div id="distance-histograms" class="section level3">
+<h3>Distance histograms</h3>
+<pre class="r"><code>library(ggridges)
+ggplot(as.data.frame(colData(spe))) + 
+    geom_density_ridges(aes(distToCells, celltype, fill = celltype)) +
+    geom_vline(xintercept = 0, color = &quot;dark red&quot;, linewidth = 2) +
+    scale_fill_manual(values = metadata(spe)$color_vectors$celltype)</code></pre>
+<pre><code>Picking joint bandwidth of 5.38</code></pre>
+<pre><code>Warning: Removed 2995 rows containing non-finite values
+(`stat_density_ridges()`).</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/dist_histograms-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="interaction-analysis" class="section level3">
+<h3>Interaction analysis</h3>
+<pre class="r"><code>out &lt;- testInteractions(spe, 
+                        group_by = &quot;sample_id&quot;,
+                        label = &quot;celltype&quot;, 
+                        colPairName = &quot;neighborhood&quot;)
+
+head(out)</code></pre>
+<pre><code>DataFrame with 6 rows and 10 columns
+                group_by  from_label         to_label        ct      p_gt
+             &lt;character&gt; &lt;character&gt;      &lt;character&gt; &lt;numeric&gt; &lt;numeric&gt;
+1 221031_day1_Haibin_1..    AEC_like         AEC_like 0.2435233  0.333666
+2 221031_day1_Haibin_1..    AEC_like               AF 0.5829016  1.000000
+3 221031_day1_Haibin_1..    AEC_like                B 0.0544041  0.842158
+4 221031_day1_Haibin_1..    AEC_like              CD4 0.0207254  0.909091
+5 221031_day1_Haibin_1..    AEC_like              CD8 0.0181347  1.000000
+6 221031_day1_Haibin_1..    AEC_like Endothelial_CD31 0.2253886  0.168831
+       p_lt interaction         p       sig    sigval
+  &lt;numeric&gt;   &lt;logical&gt; &lt;numeric&gt; &lt;logical&gt; &lt;numeric&gt;
+1  0.716284        TRUE  0.333666     FALSE         0
+2  0.001998       FALSE  0.001998      TRUE        -1
+3  0.202797       FALSE  0.202797     FALSE         0
+4  0.170829       FALSE  0.170829     FALSE         0
+5  0.002997       FALSE  0.002997      TRUE        -1
+6  0.863137        TRUE  0.168831     FALSE         0</code></pre>
+<pre class="r"><code>out %&gt;% as_tibble() %&gt;%
+    group_by(from_label, to_label) %&gt;%
+    summarize(sum_sigval = sum(sigval, na.rm = TRUE)) %&gt;%
+    ggplot() +
+        geom_tile(aes(from_label, to_label, fill = sum_sigval)) +
+        scale_fill_gradient2(low = muted(&quot;blue&quot;), mid = &quot;white&quot;, high = muted(&quot;red&quot;)) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;from_label&#39;. You can override using the
+`.groups` argument.</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/interactions_heatmap-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>out2 &lt;- testInteractions(spe, 
+                        group_by = &quot;sample_id&quot;,
+                        label = &quot;celltype&quot;, 
+                        colPairName = &quot;neighborhood&quot;,
+                        method = &quot;patch&quot;, 
+                        patch_size = 3)
+
+out2 %&gt;% as_tibble() %&gt;%
+    group_by(from_label, to_label) %&gt;%
+    summarize(sum_sigval = sum(sigval, na.rm = TRUE)) %&gt;%
+    ggplot() +
+        geom_tile(aes(from_label, to_label, fill = sum_sigval)) +
+        scale_fill_gradient2(low = muted(&quot;blue&quot;), mid = &quot;white&quot;, high = muted(&quot;red&quot;)) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))</code></pre>
+<pre><code>`summarise()` has grouped output by &#39;from_label&#39;. You can override using the
+`.groups` argument.</code></pre>
+<p><img src="figure/5_spatial_vis.Rmd/interactions_heatmap_patch-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="save-data" class="section level3">
+<h3>Save data</h3>
+<pre class="r"><code>saveRDS(spe, file.path(&quot;output&quot;, &quot;spe5.rds&quot;))</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.2.2 (2022-10-31 ucrt)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 10 x64 (build 19044)
+
+Matrix products: default
+
+locale:
+[1] LC_COLLATE=English_Switzerland.utf8  LC_CTYPE=English_Switzerland.utf8   
+[3] LC_MONETARY=English_Switzerland.utf8 LC_NUMERIC=C                        
+[5] LC_TIME=English_Switzerland.utf8    
+
+attached base packages:
+[1] stats4    stats     graphics  grDevices utils     datasets  methods  
+[8] base     
+
+other attached packages:
+ [1] ggridges_0.5.4              BiocParallel_1.32.6        
+ [3] dittoSeq_1.8.1              scales_1.2.1               
+ [5] patchwork_1.1.2             cytomapper_1.10.1          
+ [7] EBImage_4.40.1              RColorBrewer_1.1-3         
+ [9] circlize_0.4.15             spicyR_1.8.0               
+[11] lisaClust_1.4.0             lubridate_1.9.2            
+[13] forcats_1.0.0               stringr_1.5.0              
+[15] dplyr_1.1.2                 purrr_1.0.1                
+[17] readr_2.1.4                 tidyr_1.3.0                
+[19] tibble_3.2.1                tidyverse_2.0.0            
+[21] pheatmap_1.0.12             igraph_1.4.2               
+[23] viridis_0.6.3               viridisLite_0.4.2          
+[25] ggplot2_3.4.2               imcRtools_1.7.0            
+[27] SpatialExperiment_1.8.1     SingleCellExperiment_1.20.1
+[29] SummarizedExperiment_1.28.0 Biobase_2.56.0             
+[31] GenomicRanges_1.48.0        GenomeInfoDb_1.34.9        
+[33] IRanges_2.30.0              S4Vectors_0.34.0           
+[35] BiocGenerics_0.44.0         MatrixGenerics_1.10.0      
+[37] matrixStats_0.62.0          workflowr_1.7.0            
+
+loaded via a namespace (and not attached):
+  [1] utf8_1.2.3                shinydashboard_0.7.2     
+  [3] R.utils_2.12.2            lme4_1.1-33              
+  [5] tidyselect_1.2.0          htmlwidgets_1.6.2        
+  [7] grid_4.2.2                DropletUtils_1.18.1      
+  [9] munsell_0.5.0             codetools_0.2-19         
+ [11] units_0.8-2               DT_0.27                  
+ [13] withr_2.5.0               spatstat.random_3.1-5    
+ [15] colorspace_2.1-0          highr_0.10               
+ [17] knitr_1.42                rstudioapi_0.14          
+ [19] tensor_1.5                labeling_0.4.2           
+ [21] git2r_0.32.0              GenomeInfoDbData_1.2.9   
+ [23] polyclip_1.10-4           bit64_4.0.5              
+ [25] farver_2.1.1              rhdf5_2.42.1             
+ [27] rprojroot_2.0.3           vctrs_0.6.2              
+ [29] generics_0.1.3            xfun_0.39                
+ [31] timechange_0.2.0          R6_2.5.1                 
+ [33] ggbeeswarm_0.7.2          graphlayouts_1.0.0       
+ [35] locfit_1.5-9.7            concaveman_1.1.0         
+ [37] scam_1.2-14               bitops_1.0-7             
+ [39] rhdf5filters_1.10.1       spatstat.utils_3.0-3     
+ [41] cachem_1.0.8              RTriangle_1.6-0.12       
+ [43] DelayedArray_0.22.0       promises_1.2.0.1         
+ [45] vroom_1.6.3               ggraph_2.1.0             
+ [47] beeswarm_0.4.0            gtable_0.3.3             
+ [49] beachmat_2.14.2           goftest_1.2-3            
+ [51] processx_3.8.1            tidygraph_1.2.3          
+ [53] rlang_1.1.1               systemfonts_1.0.4        
+ [55] GlobalOptions_0.1.2       splines_4.2.2            
+ [57] spatstat.geom_3.2-1       yaml_2.3.7               
+ [59] abind_1.4-5               httpuv_1.6.11            
+ [61] tools_4.2.2               ellipsis_0.3.2           
+ [63] spatstat.core_2.4-4       raster_3.6-20            
+ [65] jquerylib_0.1.4           proxy_0.4-27             
+ [67] Rcpp_1.0.10               sparseMatrixStats_1.10.0 
+ [69] zlibbioc_1.42.0           classInt_0.4-9           
+ [71] RCurl_1.98-1.7            ps_1.7.5                 
+ [73] rpart_4.1.19              deldir_1.0-6             
+ [75] cowplot_1.1.1             ggrepel_0.9.3            
+ [77] fs_1.6.2                  magrittr_2.0.3           
+ [79] data.table_1.14.8         magick_2.7.4             
+ [81] lmerTest_3.1-3            whisker_0.4.1            
+ [83] hms_1.1.3                 mime_0.12                
+ [85] fftwtools_0.9-11          evaluate_0.21            
+ [87] xtable_1.8-4              jpeg_0.1-10              
+ [89] shape_1.4.6               gridExtra_2.3            
+ [91] compiler_4.2.2            V8_4.3.0                 
+ [93] KernSmooth_2.23-20        crayon_1.5.2             
+ [95] minqa_1.2.5               R.oo_1.25.0              
+ [97] htmltools_0.5.4           mgcv_1.8-41              
+ [99] later_1.3.1               tzdb_0.4.0               
+[101] tiff_0.1-11               DBI_1.1.3                
+[103] tweenr_2.0.2              MASS_7.3-58.1            
+[105] boot_1.3-28.1             sf_1.0-12                
+[107] Matrix_1.5-3              cli_3.6.0                
+[109] R.methodsS3_1.8.2         parallel_4.2.2           
+[111] pkgconfig_2.0.3           getPass_0.2-2            
+[113] numDeriv_2016.8-1.1       sp_1.6-0                 
+[115] spatstat.sparse_3.0-1     terra_1.7-29             
+[117] scuttle_1.8.4             svglite_2.1.1            
+[119] vipor_0.4.5               bslib_0.4.2              
+[121] dqrng_0.3.0               XVector_0.36.0           
+[123] callr_3.7.3               digest_0.6.31            
+[125] spatstat.data_3.0-1       rmarkdown_2.21           
+[127] edgeR_3.40.2              distances_0.1.9          
+[129] DelayedMatrixStats_1.20.0 curl_5.0.0               
+[131] shiny_1.7.4               nloptr_2.0.3             
+[133] rjson_0.2.21              nlme_3.1-162             
+[135] lifecycle_1.0.3           jsonlite_1.8.4           
+[137] Rhdf5lib_1.20.0           BiocNeighbors_1.16.0     
+[139] limma_3.54.2              fansi_1.0.4              
+[141] pillar_1.9.0              lattice_0.20-45          
+[143] fastmap_1.1.1             httr_1.4.6               
+[145] glue_1.6.2                png_0.1-8                
+[147] svgPanZoom_0.3.4          bit_4.0.5                
+[149] ggforce_0.4.1             class_7.3-21             
+[151] stringi_1.7.12            sass_0.4.6               
+[153] HDF5Array_1.26.0          nnls_1.4                 
+[155] e1071_1.7-13             </code></pre>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
