@@ -405,7 +405,7 @@ aria-hidden="true"></span> </a>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2023-05-17
+<strong>Last updated:</strong> 2023-05-30
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -563,13 +563,13 @@ laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haib
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrong606b210">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrong0eb97cb">
 <span class="glyphicon glyphicon-ok text-success"
-aria-hidden="true"></span> <strong>Repository version:</strong> 606b210
+aria-hidden="true"></span> <strong>Repository version:</strong> 0eb97cb
 </a>
 </p>
 </div>
-<div id="strongRepositoryversionstrong606b210"
+<div id="strongRepositoryversionstrong0eb97cb"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -578,7 +578,7 @@ and connecting the code version to the results is critical for
 reproducibility.
 </p>
 <p>
-The results in this page were generated with repository version 606b210.
+The results in this page were generated with repository version 0eb97cb.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -604,12 +604,8 @@ Ignored files:
 Untracked files:
     Untracked:  3_communities_v2.png
     Untracked:  6_communities_v3.png
-    Untracked:  analysis/2_IMCA_cell_annotation.Rmd
-    Untracked:  analysis/3_dim_red.Rmd
-    Untracked:  analysis/4_img_vis.Rmd
     Untracked:  analysis/5_spatial_vis.Rmd
     Untracked:  analysis/6_statistics.Rmd
-    Untracked:  analysis/6_statistics_v2.Rmd
     Untracked:  data/images.csv
     Untracked:  data/images.rds
     Untracked:  data/img/
@@ -628,6 +624,12 @@ Untracked files:
     Untracked:  output/spe3.rds
     Untracked:  output/spe4.rds
     Untracked:  output/spe_ca.rds
+
+Unstaged changes:
+    Modified:   analysis/1_QC_mask.Rmd
+    Modified:   analysis/3_dim_red.Rmd
+    Deleted:    analysis/about.Rmd
+    Deleted:    analysis/license.Rmd
 
 </code></pre>
 <p>
@@ -673,6 +675,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+0eb97cb
+</td>
+<td>
+Tess Brodie
+</td>
+<td>
+2023-05-30
+</td>
+<td>
+wflow_publish("analysis/0_prep_data.Rmd", delete_cache = TRUE)
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+e04fc5e
+</td>
+<td>
+Tess Brodie
+</td>
+<td>
+2023-05-17
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 html
@@ -906,12 +942,20 @@ rowData(spe)$use_channel &lt;- grepl(&quot;a-SMA|CD19|HNFa|CD11b|F4_80|CD44|CD3e
 <div id="plot-cell-counts" class="section level3">
 <h3>Plot cell counts</h3>
 <pre class="r"><code>plotCounts(spe, 
-    group_by = &quot;ROI&quot;, 
+    group_by = c(&quot;ROI&quot;), 
     color_by = &quot;condition&quot;) +
             ylim(0, 15000)</code></pre>
 <pre><code>Scale for y is already present.
 Adding another scale for y, which will replace the existing scale.</code></pre>
 <p><img src="figure/0_prep_data.Rmd/cellcounts-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>plotCounts(spe, 
+    group_by = &quot;condition&quot;, 
+    color_by = &quot;condition&quot;)</code></pre>
+<p><img src="figure/0_prep_data.Rmd/cellcounts-2.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>plotCounts(spe, 
+    group_by = &quot;annotation&quot;, 
+    color_by = &quot;condition&quot;)</code></pre>
+<p><img src="figure/0_prep_data.Rmd/cellcounts-3.png" width="768" style="display: block; margin: auto;" /></p>
 </div>
 <div id="define-colors" class="section level3">
 <h3>Define colors</h3>
