@@ -1,0 +1,569 @@
+---
+title: "IMC data analysis workflow"
+author: "Tess and Tural"
+date: "University of Bern, DBMR, Visceral and Transplantation Surgery lab"
+output:
+  html_document:
+    code_folding: hide
+editor_options:
+  chunk_output_type: console
+---
+
+## Statistics 
+
+```{r setup, include=FALSE}
+#Setup knitr, incuding path
+knitr::opts_chunk$set(class.source = "foldable")
+
+#Important - this path is relative to your dataset, set working directory
+knitr::opts_knit$set(root.dir = "C:/Users/IMC Platform laptop/Users2/Tess/SteinbockCellSegmentation/221130_haibin/230515_workflowr_haibin")
+
+#Set cache
+knitr::opts_chunk$set(autodep = TRUE, cache = TRUE, cache.lazy = FALSE)
+
+#To make figures
+knitr::opts_chunk$set(dev = "png")
+```
+
+```{css, echo=FALSE}
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+### Load packages 
+
+```{r load-libs, message=FALSE}
+library(SpatialExperiment)
+library(imcRtools)
+library(ggplot2)
+library(viridis)
+library(igraph)
+library(pheatmap)
+library(tidyverse)
+library(lisaClust)
+library(spicyR)
+library(circlize)
+library(RColorBrewer)
+library(cytomapper)
+library(patchwork)
+library(tidyverse)
+library(scales)
+library(dittoSeq)
+library(BiocParallel)
+#Differential abundance testing
+library("edgeR")
+#Differential state testing
+library("diffcyt")
+library("data.table")
+library("ggrepel")
+```
+
+### Load data
+
+```{r load data}
+spe <- readRDS(file.path("output", "spe4.rds"))
+
+spe$celltype <- factor(spe$celltype, levels = unique(spe$celltype))
+
+spe$annotation <- factor(spe$annotation, levels = c("S", "M", "L"))
+
+spe$layer <- paste(spe$condition, spe$annotation, sep = "_")
+spe$layer <- factor(spe$layer, levels = c("KO_S", "KO_M", "KO_L", "WT_S", "WT_M", "WT_L"))
+
+
+    
+```
+
+
+```{r differential abundance analysis with strain}
+#Get the conditions
+spe_cond <- unique(spe$condition)
+
+#Setup
+abundances <- table(spe$celltype, spe$sample_id)
+extra <- colData(spe)[match(colnames(abundances), spe$sample_id),]
+y.ab <- DGEList(abundances, samples = extra)
+
+#No intercept model for enabling all comparisons/not selecting reference level
+da_design <- model.matrix(~0 + factor(condition), y.ab$samples)
+#Remove "factor(condition)" from colnames
+colnames(da_design) <- sub("factor(condition)", "", colnames(da_design), fixed = TRUE)
+
+
+y.ab <- estimateDisp(y.ab, da_design, trend = "none")
+fit.ab <- glmQLFit(y.ab, da_design, robust = TRUE, abundance.trend = FALSE)
+
+# Check if the constant cell number assumption is active
+# y.ab <- calcNormFactors(y.ab)
+# y.ab <- estimateDisp(y.ab, da_design, trend = "none")
+# fit.ab <- glmQLFit(y.ab, da_design, robust = TRUE, abundance.trend = FALSE)
+
+#Plotting a QL dispersion estimate plot
+
+abundance_qld_plot <- plotQLDisp(fit.ab, cex = 1)
+
+#Otherwise create standard contrast
+contrast <- "WT - KO"
+da_contrast <- makeContrasts(contrasts = contrast, levels = da_design)
+
+
+#Testing for differences
+da_results <- glmQLFTest(fit.ab, contrast = da_contrast)
+#Making a results table
+da_table <- topTags(da_results, n = length(levels(spe$celltype))) 
+da_table
+
+#Volcano plot for celltype significance
+da_plotdata <- data.frame(rownames(da_table), da_table$table$logFC, da_table$table$FDR)
+colnames(da_plotdata) <- c("celltype", "log2fold", "padj")
+da_plotdata$threshold <- ifelse(da_plotdata$log2fold > 0 & da_plotdata$padj < 0.05, "down",
+                             ifelse(da_plotdata$log2fold < 0 & da_plotdata$padj < 0.05, "up", "ns"))
+
+#Label genes of interest - top 10 DE genes
+cells_interest <- da_plotdata %>%
+  group_by(threshold)  %>%
+  slice_min(n = 5, order_by = padj)
+
+cells_interest <- cells_interest[!grepl("ns", cells_interest$threshold),]
+
+ggplot(data = da_plotdata,
+       aes(x = log2fold, y = -log10(padj))) +
+  geom_point(shape = 16, size = 2, stroke = 1, aes(color = as.factor(threshold))) +
+  geom_text_repel(data = da_plotdata[da_plotdata$celltype %in% cells_interest$celltype, ], aes(label = celltype)) +
+  scale_color_manual(values = c("down" = "#3399FF", "ns" = "grey", "up" = "#FF3333")) +
+  xlab("log2fold change") +
+  ylab("-log10 adjusted p-value") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15), plot.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(colour = "gray", size = 0.25),
+        panel.border = element_blank(), axis.ticks.x = element_blank(),
+        axis.line = element_line(color="black", linewidth = 0.5), legend.position = "none")
+
+```
+
+
+
+```{r differential abundance analysis with tumor size vs average}
+#Get the conditions
+spe_ann <- levels(spe$annotation)
+
+#Setup
+abundances <- table(spe$celltype, spe$sample_id)
+extra <- colData(spe)[match(colnames(abundances), spe$sample_id),]
+y.ab <- DGEList(abundances, samples = extra)
+
+#No intercept model for enabling all comparisons/not selecting reference level
+da_design <- model.matrix(~0 + factor(annotation), y.ab$samples)
+#Remove "factor(condition)" from colnames
+colnames(da_design) <- sub("factor(annotation)", "", colnames(da_design), fixed = TRUE)
+
+y.ab <- estimateDisp(y.ab, da_design, trend = "none")
+fit.ab <- glmQLFit(y.ab, da_design, robust = TRUE, abundance.trend = FALSE)
+
+# Check if the constant cell number assumption is active
+# y.ab <- calcNormFactors(y.ab)
+# y.ab <- estimateDisp(y.ab, da_design, trend = "none")
+# fit.ab <- glmQLFit(y.ab, da_design, robust = TRUE, abundance.trend = FALSE)
+
+#Plotting a QL dispersion estimate plot
+
+abundance_qld_plot <- plotQLDisp(fit.ab, cex = 1)
+
+```
+
+## Separated by tumor size {.tabset}
+
+```{r differential abundance analysis with tumor size, results='asis'}
+
+#Otherwise create standard contrast
+for(contrast in c("S - M", "M - L", "S - L",
+                  "S - (M/2 + L/2)", "M - (S/2 + L/2)", "L - (S/2 + M/2)")) {
+
+da_contrast <- makeContrasts(contrasts = contrast, levels = da_design)
+
+
+#Testing for differences
+da_results <- glmQLFTest(fit.ab, contrast = da_contrast)
+#Making a results table
+da_table <- topTags(da_results, n = length(levels(spe$celltype))) 
+da_table
+
+
+#Volcano plot for celltype significance
+da_plotdata <- data.frame(rownames(da_table), da_table$table$logFC, da_table$table$FDR)
+colnames(da_plotdata) <- c("celltype", "log2fold", "padj")
+da_plotdata$threshold <- ifelse(da_plotdata$log2fold > 0 & da_plotdata$padj < 0.05, "down",
+                             ifelse(da_plotdata$log2fold < 0 & da_plotdata$padj < 0.05, "up", "ns"))
+
+p <- ggplot(data = da_plotdata,
+       aes(x = log2fold, y = -log10(padj))) +
+  geom_point(shape = 16, size = 2, stroke = 1, aes(color = as.factor(threshold))) +
+  geom_text_repel(data = da_plotdata, aes(label = celltype)) +
+  scale_color_manual(values = c("down" = "#3399FF", "ns" = "grey", "up" = "#FF3333")) +
+  xlab("log2fold change") +
+  ylab("-log10 adjusted p-value") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15), plot.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(colour = "gray", size = 0.25),
+        panel.border = element_blank(), axis.ticks.x = element_blank(),
+        axis.line = element_line(color="black", linewidth = 0.5), legend.position = "none")
+
+
+cat("### ", contrast, "\n"); print(p); cat("\n\n")
+}
+
+```
+
+```{r differential abundance analysis with layered metadata preparation}
+
+#Setup
+abundances <- table(spe$celltype, spe$sample_id)
+extra <- colData(spe)[match(colnames(abundances), spe$sample_id),]
+y.ab <- DGEList(abundances, samples = extra)
+
+#No intercept model for enabling all comparisons/not selecting reference level
+da_design <- model.matrix(~0 + factor(layer), y.ab$samples)
+#Remove "factor(condition)" from colnames
+colnames(da_design) <- sub("factor(layer)", "", colnames(da_design), fixed = TRUE)
+
+y.ab <- estimateDisp(y.ab, da_design, trend = "none")
+fit.ab <- glmQLFit(y.ab, da_design, robust = TRUE, abundance.trend = FALSE)
+
+# Check if the constant cell number assumption is active
+# y.ab <- calcNormFactors(y.ab)
+# y.ab <- estimateDisp(y.ab, da_design, trend = "none")
+# fit.ab <- glmQLFit(y.ab, da_design, robust = TRUE, abundance.trend = FALSE)
+
+#Plotting a QL dispersion estimate plot
+
+abundance_qld_plot <- plotQLDisp(fit.ab, cex = 1)
+
+```
+
+## Separated by layered conditions {.tabset}
+
+```{r differential abundance analysis with layered metadata, results='asis'}
+#Otherwise create standard contrast
+for(contrast in c("KO_S - KO_M", "KO_M - KO_L", "KO_S - KO_L",
+                  "WT_S - WT_M", "WT_M - WT_L", "WT_S - WT_L",
+                  "KO_S - WT_S", "KO_M - WT_M", "KO_L - WT_L")) {
+
+da_contrast <- makeContrasts(contrasts = contrast, levels = da_design)
+
+#Testing for differences
+da_results <- glmQLFTest(fit.ab, contrast = da_contrast)
+#Making a results table
+da_table <- topTags(da_results, n = length(levels(spe$celltype))) 
+da_table
+
+
+#Volcano plot for celltype significance
+da_plotdata <- data.frame(rownames(da_table), da_table$table$logFC, da_table$table$FDR)
+colnames(da_plotdata) <- c("celltype", "log2fold", "padj")
+da_plotdata$threshold <- ifelse(da_plotdata$log2fold > 0 & da_plotdata$padj < 0.05, "down",
+                             ifelse(da_plotdata$log2fold < 0 & da_plotdata$padj < 0.05, "up", "ns"))
+
+p <- ggplot(data = da_plotdata,
+       aes(x = log2fold, y = -log10(padj))) +
+  geom_point(shape = 16, size = 2, stroke = 1, aes(color = as.factor(threshold))) +
+  geom_text_repel(data = da_plotdata, aes(label = celltype)) +
+  scale_color_manual(values = c("down" = "#3399FF", "ns" = "grey", "up" = "#FF3333")) +
+  xlab("log2fold change") +
+  ylab("-log10 adjusted p-value") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15), plot.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(colour = "gray", size = 0.25),
+        panel.border = element_blank(), axis.ticks.x = element_blank(),
+        axis.line = element_line(color="black", linewidth = 0.5), legend.position = "none")
+
+cat("### ", contrast, "\n"); print(p); cat("\n\n")
+}
+
+```
+
+```{r differential state analysis for condition}
+
+acounts <- t(assay(spe, name = "exprs"))
+#Get a guide index of sample IDs from rownames
+guide <- sub("_[^_]+$", "", colnames(spe))
+#Split into a list of count matrices based on sample iDs
+acounts <- split.data.frame(acounts, f = guide)
+#Get experiment info from metadata
+experiment_info <- spe@metadata$meta_final
+#Gather marker info
+marker_info <- as.data.frame(rowData(spe))
+marker_info <- marker_info[, c("channel", "name", "use_channel")]
+
+#As opposed to CATALYST, limma uses "state" markers instead of "type" for analysis.
+#As such, simply using the clustering metadata column "marker_class" will be insufficient
+#at the very least because the markers are flipped, and also user may choose to skip that step.
+#So we use "use_channel" column which is always defined with data preparation step instead.
+marker_info$use_channel <- ifelse(marker_info$use_channel, "state", "type")
+
+#Additionally remove DNA markers from analysis
+colnames(marker_info) <- c("channel_name", "marker_name", "marker_class")
+marker_info[c("DNA1", "DNA2", "HistoneH3"), ]$marker_class <- "type"
+
+#Prepare the object
+d_se <- prepareData(acounts, experiment_info, marker_info)
+
+#Create pseudo-clustering results by embedding celltype annotations
+#Works if spe$celltype is a factor, which is now the standard in the app
+rowData(d_se)$cluster_id <- spe$celltype
+
+#Get counts
+d_counts <- calcCounts(d_se)
+#Get medians
+d_medians <- calcMedians(d_se)
+
+#No intercept model for enabling all comparisons/not selecting reference level
+ds_design <- model.matrix(~0 + factor(condition), experiment_info)
+#Remove "factor(condition)" from colnames
+colnames(ds_design) <- sub("factor(condition)", "", colnames(ds_design), fixed = TRUE)
+
+#Otherwise create standard contrast
+contrast <- "WT - KO"
+ds_contrast <- makeContrasts(contrasts = contrast, levels = ds_design)
+
+
+#Performing the DS analysis
+res_ds <- testDS_limma(d_counts, d_medians, ds_design, ds_contrast)
+
+#Getting the results summary
+ds_table <- as.data.frame(rowData(res_ds))
+ds_table <- ds_table[order(ds_table$ID, ds_table$p_adj), ]
+
+ds_table[which(ds_table$p_adj < 0.05), ]
+
+
+#Volcano plot for state significance
+comparisons <- paste(ds_table$cluster_id, ds_table$marker_id, sep = "_")
+ds_plotdata <- data.frame(comparisons, ds_table$logFC, ds_table$p_adj)
+colnames(ds_plotdata) <- c("channel", "log2fold", "padj")
+ds_plotdata$threshold <- ifelse(ds_plotdata$log2fold > 0 & ds_plotdata$padj < 0.05, "down",
+                             ifelse(ds_plotdata$log2fold < 0 & ds_plotdata$padj < 0.05, "up", "ns"))
+
+#Label genes of interest - top 10 DS channels
+channels_interest <- ds_plotdata %>%
+  group_by(threshold)  %>%
+  slice_min(n = 5, order_by = padj)
+
+channels_interest <- channels_interest[!grepl("ns", channels_interest$threshold),]
+
+ggplot(data = ds_plotdata,
+       aes(x = log2fold, y = -log10(padj))) +
+  geom_point(shape = 16, size = 2, stroke = 1, aes(color = as.factor(threshold))) +
+  geom_text_repel(data = ds_plotdata[ds_plotdata$channel %in% channels_interest$channel, ], aes(label = channel)) +
+  scale_color_manual(values = c("down" = "#3399FF", "ns" = "grey", "up" = "#FF3333")) +
+  xlab("log2fold change") +
+  ylab("-log10 adjusted p-value") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15), plot.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(colour = "gray", size = 0.25),
+        panel.border = element_blank(), axis.ticks.x = element_blank(),
+        axis.line = element_line(color="black", linewidth = 0.5), legend.position = "none")
+
+```
+
+```{r differential state analysis for annotation}
+
+acounts <- t(assay(spe, name = "exprs"))
+#Get a guide index of sample IDs from rownames
+guide <- sub("_[^_]+$", "", colnames(spe))
+#Split into a list of count matrices based on sample iDs
+acounts <- split.data.frame(acounts, f = guide)
+#Get experiment info from metadata
+experiment_info <- spe@metadata$meta_final
+#Gather marker info
+marker_info <- as.data.frame(rowData(spe))
+marker_info <- marker_info[, c("channel", "name", "use_channel")]
+
+#As opposed to CATALYST, limma uses "state" markers instead of "type" for analysis.
+#As such, simply using the clustering metadata column "marker_class" will be insufficient
+#at the very least because the markers are flipped, and also user may choose to skip that step.
+#So we use "use_channel" column which is always defined with data preparation step instead.
+marker_info$use_channel <- ifelse(marker_info$use_channel, "state", "type")
+
+#Additionally remove DNA markers from analysis
+colnames(marker_info) <- c("channel_name", "marker_name", "marker_class")
+marker_info[c("DNA1", "DNA2", "HistoneH3"), ]$marker_class <- "type"
+
+#Prepare the object
+d_se <- prepareData(acounts, experiment_info, marker_info)
+
+#Create pseudo-clustering results by embedding celltype annotations
+#Works if spe$celltype is a factor, which is now the standard in the app
+rowData(d_se)$cluster_id <- spe$celltype
+
+#Get counts
+d_counts <- calcCounts(d_se)
+#Get medians
+d_medians <- calcMedians(d_se)
+
+#No intercept model for enabling all comparisons/not selecting reference level
+ds_design <- model.matrix(~0 + factor(annotation), experiment_info)
+#Remove "factor(annotation)" from colnames
+colnames(ds_design) <- sub("factor(annotation)", "", colnames(ds_design), fixed = TRUE)
+
+```
+
+## State separated by tumor size {.tabset}
+
+```{r differential state analysis with tumor size - annotation, results='asis'}
+
+#Otherwise create standard contrast
+for(contrast in c("S - M", "M - L", "S - L",
+                  "S - (M/2 + L/2)", "M - (S/2 + L/2)", "L - (S/2 + M/2)")) {
+  
+ds_contrast <- makeContrasts(contrasts = contrast, levels = ds_design)
+
+#Performing the DS analysis
+res_ds <- testDS_limma(d_counts, d_medians, ds_design, ds_contrast)
+
+#Getting the results summary
+ds_table <- as.data.frame(rowData(res_ds))
+ds_table <- ds_table[order(ds_table$ID, ds_table$p_adj), ]
+
+ds_table[which(ds_table$p_adj < 0.05), ]
+
+
+#Volcano plot for state significance
+comparisons <- paste(ds_table$cluster_id, ds_table$marker_id, sep = "_")
+ds_plotdata <- data.frame(comparisons, ds_table$logFC, ds_table$p_adj)
+colnames(ds_plotdata) <- c("channel", "log2fold", "padj")
+ds_plotdata$threshold <- ifelse(ds_plotdata$log2fold > 0 & ds_plotdata$padj < 0.05, "down",
+                             ifelse(ds_plotdata$log2fold < 0 & ds_plotdata$padj < 0.05, "up", "ns"))
+
+#Label genes of interest - top 10 DS channels
+channels_interest <- ds_plotdata %>%
+  group_by(threshold)  %>%
+  slice_min(n = 5, order_by = padj)
+
+channels_interest <- channels_interest[!grepl("ns", channels_interest$threshold),]
+
+p <- ggplot(data = ds_plotdata,
+       aes(x = log2fold, y = -log10(padj))) +
+  geom_point(shape = 16, size = 2, stroke = 1, aes(color = as.factor(threshold))) +
+  geom_text_repel(data = ds_plotdata[ds_plotdata$channel %in% channels_interest$channel, ], aes(label = channel)) +
+  scale_color_manual(values = c("down" = "#3399FF", "ns" = "grey", "up" = "#FF3333")) +
+  xlab("log2fold change") +
+  ylab("-log10 adjusted p-value") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15), plot.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(colour = "gray", size = 0.25),
+        panel.border = element_blank(), axis.ticks.x = element_blank(),
+        axis.line = element_line(color="black", linewidth = 0.5), legend.position = "none")
+
+cat("### ", contrast, "\n"); print(p); cat("\n\n")
+
+}
+```
+
+```{r differential state analysis for layer}
+
+#Get the counts table
+acounts <- t(assay(spe, name = "exprs"))
+#Get a guide index of sample IDs from rownames
+guide <- sub("_[^_]+$", "", colnames(spe))
+#Split into a list of count matrices based on sample iDs
+acounts <- split.data.frame(acounts, f = guide)
+#Get experiment info from metadata
+experiment_info <- spe@metadata$meta_final
+#Add layered metadata here
+experiment_info$layer <- paste(experiment_info$condition, experiment_info$annotation, sep = "_")
+
+#Gather marker info
+marker_info <- as.data.frame(rowData(spe))
+marker_info <- marker_info[, c("channel", "name", "use_channel")]
+
+#As opposed to CATALYST, limma uses "state" markers instead of "type" for analysis.
+#As such, simply using the clustering metadata column "marker_class" will be insufficient
+#at the very least because the markers are flipped, and also user may choose to skip that step.
+#So we use "use_channel" column which is always defined with data preparation step instead.
+marker_info$use_channel <- ifelse(marker_info$use_channel, "state", "type")
+
+#Additionally remove DNA markers from analysis
+colnames(marker_info) <- c("channel_name", "marker_name", "marker_class")
+marker_info[c("DNA1", "DNA2", "HistoneH3"), ]$marker_class <- "type"
+
+#Prepare the object
+d_se <- prepareData(acounts, experiment_info, marker_info)
+
+#Create pseudo-clustering results by embedding celltype annotations
+#Works if spe$celltype is a factor, which is now the standard in the app
+rowData(d_se)$cluster_id <- spe$celltype
+
+#Get counts
+d_counts <- calcCounts(d_se)
+#Get medians
+d_medians <- calcMedians(d_se)
+
+#No intercept model for enabling all comparisons/not selecting reference level
+ds_design <- model.matrix(~0 + factor(layer), experiment_info)
+#Remove "factor(layer)" from colnames
+colnames(ds_design) <- sub("factor(layer)", "", colnames(ds_design), fixed = TRUE)
+
+```
+
+## State separated by tumor size {.tabset}
+
+```{r differential state analysis with layered annotation, results='asis'}
+
+#Otherwise create standard contrast
+for(contrast in c("KO_S - KO_M", "KO_M - KO_L", "KO_S - KO_L",
+                  "WT_S - WT_M", "WT_M - WT_L", "WT_S - WT_L",
+                  "KO_S - WT_S", "KO_M - WT_M", "KO_L - WT_L")) {
+  
+ds_contrast <- makeContrasts(contrasts = contrast, levels = ds_design)
+
+
+#Performing the DS analysis
+res_ds <- testDS_limma(d_counts, d_medians, ds_design, ds_contrast)
+
+#Getting the results summary
+ds_table <- as.data.frame(rowData(res_ds))
+ds_table <- ds_table[order(ds_table$ID, ds_table$p_adj), ]
+
+ds_table[which(ds_table$p_adj < 0.05), ]
+
+
+#Volcano plot for state significance
+comparisons <- paste(ds_table$cluster_id, ds_table$marker_id, sep = "_")
+ds_plotdata <- data.frame(comparisons, ds_table$logFC, ds_table$p_adj)
+colnames(ds_plotdata) <- c("channel", "log2fold", "padj")
+ds_plotdata$threshold <- ifelse(ds_plotdata$log2fold > 0 & ds_plotdata$padj < 0.05, "down",
+                             ifelse(ds_plotdata$log2fold < 0 & ds_plotdata$padj < 0.05, "up", "ns"))
+
+#Label genes of interest - top 10 DS channels
+channels_interest <- ds_plotdata %>%
+  group_by(threshold)  %>%
+  slice_min(n = 5, order_by = padj)
+
+channels_interest <- channels_interest[!grepl("ns", channels_interest$threshold),]
+
+p <- ggplot(data = ds_plotdata,
+       aes(x = log2fold, y = -log10(padj))) +
+  geom_point(shape = 16, size = 2, stroke = 1, aes(color = as.factor(threshold))) +
+  geom_text_repel(data = ds_plotdata[ds_plotdata$channel %in% channels_interest$channel, ], aes(label = channel)) +
+  scale_color_manual(values = c("down" = "#3399FF", "ns" = "grey", "up" = "#FF3333")) +
+  xlab("log2fold change") +
+  ylab("-log10 adjusted p-value") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15), plot.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(colour = "gray", size = 0.25),
+        panel.border = element_blank(), axis.ticks.x = element_blank(),
+        axis.line = element_line(color="black", linewidth = 0.5), legend.position = "none")
+
+cat("### ", contrast, "\n"); print(p); cat("\n\n")
+
+}
+```
