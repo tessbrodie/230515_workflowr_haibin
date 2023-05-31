@@ -1,7 +1,7 @@
-name: "230515_workflowr_haibin"
+name: 230515_workflowr_haibin
 output_dir: ../docs
 navbar:
-  title: "230515_workflowr_haibin"
+  title: 230515_workflowr_haibin
   left:
   - text: Contents
     href: index.html
